@@ -377,7 +377,7 @@ public abstract class BasePostingsFormatTestCase extends BaseIndexFileFormatTest
     iwc.setMergePolicy(newTieredMergePolicy());
     IndexWriter iw = new IndexWriter(dir, iwc);
 
-    for (int i = 100000; i <= 100400; i++){
+    for (int i = 100000; i <= 100400; i++) {
       // only add odd number
       if (i % 2 == 1) {
         Document document = new Document();
@@ -391,7 +391,7 @@ public abstract class BasePostingsFormatTestCase extends BaseIndexFileFormatTest
     DirectoryReader reader = DirectoryReader.open(iw);
     TermsEnum termsEnum = getOnlyLeafReader(reader).terms("id").iterator();
     // test seekExact
-    for (int i = 100000; i <= 100400; i++){
+    for (int i = 100000; i <= 100400; i++) {
       BytesRef target = new BytesRef(i + "");
       if (i % 2 == 1) {
         assertTrue(termsEnum.seekExact(target));
@@ -401,7 +401,7 @@ public abstract class BasePostingsFormatTestCase extends BaseIndexFileFormatTest
       }
     }
     // test seekCeil
-    for (int i = 100000; i < 100400; i++){
+    for (int i = 100000; i < 100400; i++) {
       BytesRef target = new BytesRef(i + "");
       if (i % 2 == 1) {
         assertEquals(SeekStatus.FOUND, termsEnum.seekCeil(target));

@@ -1309,11 +1309,11 @@ public class BKDWriter implements Closeable {
       int compressedByteOffset = sortedDim * config.bytesPerDim + commonPrefixLengths[sortedDim];
       int highCardinalityCost;
       int lowCardinalityCost;
-      if (count == leafCardinality) {
-        // all values in this block are different
-        highCardinalityCost = 0;
-        lowCardinalityCost = 1;
-      } else {
+//      if (count == leafCardinality) {
+//        // all values in this block are different
+//        highCardinalityCost = 0;
+//        lowCardinalityCost = 1;
+//      } else {
         // compute cost of runLen compression
         int numRunLens = 0;
         for (int i = 0; i < count; ) {
@@ -1328,7 +1328,13 @@ public class BKDWriter implements Closeable {
             count * (config.packedBytesLength - prefixLenSum - 1) + 2 * numRunLens;
         // +1 is the byte needed for storing the cardinality
         lowCardinalityCost = leafCardinality * (config.packedBytesLength - prefixLenSum + 1);
-      }
+        int directCost = count * (config.packedBytesLength - prefixLenSum);
+        System.out.println(" high: " + highCardinalityCost + ", low: " + lowCardinalityCost +
+            ", direct: " + directCost);
+        if ( directCost < Math.min(lowCardinalityCost, highCardinalityCost)) {
+          System.out.println("direct best");
+        }
+//      }
       if (lowCardinalityCost <= highCardinalityCost) {
         out.writeByte((byte) -2);
         writeLowCardinalityLeafBlockPackedValues(out, commonPrefixLengths, count, packedValues);

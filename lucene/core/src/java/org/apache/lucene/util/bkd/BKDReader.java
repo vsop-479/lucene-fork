@@ -221,6 +221,8 @@ public class BKDReader extends PointValues {
     // if true the tree is balanced, otherwise unbalanced
     private final boolean isTreeBalanced;
 
+    private boolean canTerminate;
+
     private BKDPointTree(
         IndexInput innerNodes,
         IndexInput leafNodes,
@@ -835,6 +837,8 @@ public class BKDReader extends PointValues {
           // low cardinality values
           visitSparseRawDocValues(
               commonPrefixLengths, scratchDataPackedValue, in, scratchIterator, count, visitor);
+//          visitSparseRawDocValuesEarlyTerminate(
+//              commonPrefixLengths, scratchDataPackedValue, in, scratchIterator, count, visitor);
         } else {
           // high cardinality
           visitCompressedDocValues(
@@ -870,6 +874,7 @@ public class BKDReader extends PointValues {
         int count,
         PointValues.IntersectVisitor visitor)
         throws IOException {
+      long t0 = System.nanoTime();
       int i;
       for (i = 0; i < count; ) {
         int length = in.readVInt();
@@ -879,13 +884,44 @@ public class BKDReader extends PointValues {
               scratchPackedValue, dim * config.bytesPerDim + prefix, config.bytesPerDim - prefix);
         }
         scratchIterator.reset(i, length);
+//        long tt0 = System.nanoTime();
         visitor.visit(scratchIterator, scratchPackedValue);
         i += length;
+//        long tt1 = System.nanoTime();
+//        System.out.println("bask visit: " + (tt1 - tt0));
       }
+      long t1 = System.nanoTime();
+      System.out.println("base took: " + (t1 - t0));
       if (i != count) {
         throw new CorruptIndexException(
             "Sub blocks do not add up to the expected count: " + count + " != " + i, in);
       }
+    }
+
+    private void visitSparseRawDocValuesEarlyTerminate(
+        int[] commonPrefixLengths,
+        byte[] scratchPackedValue,
+        IndexInput in,
+        BKDReaderDocIDSetIterator scratchIterator,
+        int count,
+        PointValues.IntersectVisitor visitor)
+        throws IOException {
+      long t0 = System.nanoTime();
+      int i;
+      for (i = 0; i < count; ) {
+        int length = in.readVInt();
+        for (int dim = 0; dim < config.numDims; dim++) {
+          int prefix = commonPrefixLengths[dim];
+          in.readBytes(
+              scratchPackedValue, dim * config.bytesPerDim + prefix, config.bytesPerDim - prefix);
+        }
+        scratchIterator.reset(i, length);
+        int visitState = visitor.visitWithState(scratchIterator, scratchPackedValue);
+        if (visitState == 2) break;
+        i += length;
+      }
+      long t1 = System.nanoTime();
+      System.out.println("early took: " + (t1 - t0));
     }
 
     // point is under commonPrefix

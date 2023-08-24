@@ -28,7 +28,10 @@ plugins {
   id 'com.diffplug.spotless' version "6.5.2" apply false
   id 'org.barfuin.gradle.jacocolog' version "3.0.0-RC2" apply false
 }
-
+repositories {
+//  maven { url 'https://maven.aliyun.com/repository/public' }
+  maven { url 'https://mirrors.huaweicloud.com/repository/maven/' }
+}
 apply from: file('gradle/globals.gradle')
 
 // General metadata.

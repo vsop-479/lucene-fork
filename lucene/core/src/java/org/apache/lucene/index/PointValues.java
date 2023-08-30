@@ -317,6 +317,9 @@ public abstract class PointValues {
       }
     }
 
+    /**
+     * Similar to {@link IntersectVisitor#visit(DocIdSetIterator, byte[])} but return a match state.
+     */
     default int visitWithState(DocIdSetIterator iterator, byte[] packedValue) throws IOException {
       int docID;
       while ((docID = iterator.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {

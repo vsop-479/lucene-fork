@@ -189,7 +189,7 @@ public abstract class DataInput implements Cloneable {
     }
   }
 
-//  TODO: read VLongs, etc.
+  //  TODO: read VLongs, etc.
   /**
    * Reads a specified number of vints into an array at the specified offset.
    *

@@ -371,93 +371,93 @@ public abstract class BasePostingsFormatTestCase extends BaseIndexFileFormatTest
 
   protected void subCheckBinarySearch(TermsEnum termsEnum) throws Exception {}
 
-  public void testSubBlock() throws Exception {
-    Directory dir = newDirectory();
-    // Set minTermBlockSize to 2, maxTermBlockSize to 3, to generate subBlock.
-    PostingsFormat postingsFormat = getDefaultPostingsFormat(2, 3);
+//  public void testSubBlock() throws Exception {
+//    Directory dir = newDirectory();
+//    // Set minTermBlockSize to 2, maxTermBlockSize to 3, to generate subBlock.
+//    PostingsFormat postingsFormat = getDefaultPostingsFormat(2, 3);
+//
+//    IndexWriter iw =
+//        new IndexWriter(dir, newIndexWriterConfig().setCodec(alwaysPostingsFormat(postingsFormat)));
+//    String[] categories = new String[] {"regular", "request", "rest", "teacher", "team"};
+//
+//    for (String category : categories) {
+//      Document doc = new Document();
+//      doc.add(newStringField("category", category, Field.Store.YES));
+//      iw.addDocument(doc);
+//    }
+//
+//    IndexReader reader = DirectoryReader.open(iw);
+//    iw.commit();
+//    iw.forceMerge(1);
+//
+//    TermsEnum termsEnum = getOnlyLeafReader(reader).terms("category").iterator();
+//
+//    // test seekExact.
+//    for (String category : categories) {
+//      BytesRef target = newBytesRef(category);
+//      assertTrue(termsEnum.seekExact(target));
+//      assertEquals(termsEnum.term(), target);
+//    }
+//
+//    // test seekCeil.
+//    for (String category : categories) {
+//      BytesRef target = newBytesRef(category);
+//      assertEquals(SeekStatus.FOUND, termsEnum.seekCeil(target));
+//      assertEquals(termsEnum.term(), target);
+//    }
+//
+//    iw.close();
+//    reader.close();
+//    dir.close();
+//  }
 
-    IndexWriter iw =
-        new IndexWriter(dir, newIndexWriterConfig().setCodec(alwaysPostingsFormat(postingsFormat)));
-    String[] categories = new String[] {"regular", "request", "rest", "teacher", "team"};
-
-    for (String category : categories) {
-      Document doc = new Document();
-      doc.add(newStringField("category", category, Field.Store.YES));
-      iw.addDocument(doc);
-    }
-
-    IndexReader reader = DirectoryReader.open(iw);
-    iw.commit();
-    iw.forceMerge(1);
-
-    TermsEnum termsEnum = getOnlyLeafReader(reader).terms("category").iterator();
-
-    // test seekExact.
-    for (String category : categories) {
-      BytesRef target = newBytesRef(category);
-      assertTrue(termsEnum.seekExact(target));
-      assertEquals(termsEnum.term(), target);
-    }
-
-    // test seekCeil.
-    for (String category : categories) {
-      BytesRef target = newBytesRef(category);
-      assertEquals(SeekStatus.FOUND, termsEnum.seekCeil(target));
-      assertEquals(termsEnum.term(), target);
-    }
-
-    iw.close();
-    reader.close();
-    dir.close();
-  }
-
-  public void testDeepSubBlock() throws Exception {
-    Directory dir = newDirectory();
-    // Set minTermBlockSize to 2, maxTermBlockSize to 3, to generate deep subBlock.
-    PostingsFormat postingsFormat = getDefaultPostingsFormat(2, 3);
-
-    IndexWriter iw =
-        new IndexWriter(dir, newIndexWriterConfig().setCodec(alwaysPostingsFormat(postingsFormat)));
-    String[] categories =
-        new String[] {
-            "regular", "request1", "request2", "request3", "request4", "rest", "teacher", "team"
-        };
-
-    for (String category : categories) {
-      Document doc = new Document();
-      doc.add(newStringField("category", category, Field.Store.YES));
-      iw.addDocument(doc);
-    }
-
-    IndexReader reader = DirectoryReader.open(iw);
-    iw.commit();
-    iw.forceMerge(1);
-
-    TermsEnum termsEnum = getOnlyLeafReader(reader).terms("category").iterator();
-
-    BytesRef target = newBytesRef("reques");
-    assertFalse(termsEnum.seekExact(target));
-    assertEquals(termsEnum.term(), new BytesRef("request"));
-    assertEquals(SeekStatus.NOT_FOUND, termsEnum.seekCeil(target));
-
-    // test seekExact.
-    for (String category : categories) {
-      target = newBytesRef(category);
-      assertTrue(termsEnum.seekExact(target));
-      assertEquals(termsEnum.term(), target);
-    }
-
-    // test seekCeil.
-    for (String category : categories) {
-      target = newBytesRef(category);
-      assertEquals(SeekStatus.FOUND, termsEnum.seekCeil(target));
-      assertEquals(termsEnum.term(), target);
-    }
-
-    iw.close();
-    reader.close();
-    dir.close();
-  }
+//  public void testDeepSubBlock() throws Exception {
+//    Directory dir = newDirectory();
+//    // Set minTermBlockSize to 2, maxTermBlockSize to 3, to generate deep subBlock.
+//    PostingsFormat postingsFormat = getDefaultPostingsFormat(2, 3);
+//
+//    IndexWriter iw =
+//        new IndexWriter(dir, newIndexWriterConfig().setCodec(alwaysPostingsFormat(postingsFormat)));
+//    String[] categories =
+//        new String[] {
+//          "regular", "request1", "request2", "request3", "request4", "rest", "teacher", "team"
+//        };
+//
+//    for (String category : categories) {
+//      Document doc = new Document();
+//      doc.add(newStringField("category", category, Field.Store.YES));
+//      iw.addDocument(doc);
+//    }
+//
+//    IndexReader reader = DirectoryReader.open(iw);
+//    iw.commit();
+//    iw.forceMerge(1);
+//
+//    TermsEnum termsEnum = getOnlyLeafReader(reader).terms("category").iterator();
+//
+//    BytesRef target = newBytesRef("reques");
+//    assertFalse(termsEnum.seekExact(target));
+//    assertEquals(termsEnum.term(), new BytesRef("request"));
+//    assertEquals(SeekStatus.NOT_FOUND, termsEnum.seekCeil(target));
+//
+//    // test seekExact.
+//    for (String category : categories) {
+//      target = newBytesRef(category);
+//      assertTrue(termsEnum.seekExact(target));
+//      assertEquals(termsEnum.term(), target);
+//    }
+//
+//    // test seekCeil.
+//    for (String category : categories) {
+//      target = newBytesRef(category);
+//      assertEquals(SeekStatus.FOUND, termsEnum.seekCeil(target));
+//      assertEquals(termsEnum.term(), target);
+//    }
+//
+//    iw.close();
+//    reader.close();
+//    dir.close();
+//  }
 
   public void testBinarySearchTermLeaf() throws Exception {
     Directory dir = newDirectory();

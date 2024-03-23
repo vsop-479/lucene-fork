@@ -55,6 +55,8 @@ final class SegmentTermsEnumFrame {
   int[] suffixes;
   int[] postions;
   int[] offsets;
+  int[] termBlockOrds;
+  int[] lastSubIndices;
   FixedBitSet termExists;
   long[] subCodes;
   byte[] statBytes = new byte[64];
@@ -206,9 +208,53 @@ final class SegmentTermsEnumFrame {
     totalSuffixBytes = ste.in.getFilePointer() - startSuffixFP;
 
     // Prepare suffixes, offsets to binary search.
-    if (allEqual == false) {
+    if (allEqual) {
+      if (isLeafBlock) {
+        suffix = suffixLengthsReader.readVInt();
+      } else {
+        // Handle subCode for non leaf block.
+        postions = new int[entCount];
+        termExists = new FixedBitSet(entCount);
+        subCodes = new long[entCount];
+        termBlockOrds = new int[entCount];
+        lastSubIndices = new int[entCount];
+        int termBlockOrd = 0;
+        int lastSubIndex = -1;
+        // read first vint to set suffix, byt the way, set termExist, subCode.
+        code = suffixLengthsReader.readVInt();
+        suffix = code >>> 1;
+        if ((code & 1) == 0) {
+          termExists.set(0);
+          termBlockOrd++;
+        } else {
+          // read subCode.
+          subCodes[0] = suffixLengthsReader.readVLong();
+          lastSubIndex = 0;
+        }
+        termBlockOrds[0] = termBlockOrd;
+        postions[0] = suffixLengthsReader.getPosition();
+        lastSubIndices[0] = lastSubIndex;
+        for (int i = 1; i < suffixes.length; i++) {
+          code = suffixLengthsReader.readVInt();
+          suffixes[i] = code >>> 1;
+          if ((code & 1) == 0) {
+            termExists.set(i);
+            termBlockOrd++;
+          } else {
+            // read subCode.
+            subCodes[i] = suffixLengthsReader.readVLong();
+            lastSubIndex = i;
+          }
+          termBlockOrds[i] = termBlockOrd;
+          postions[i] = suffixLengthsReader.getPosition();
+          lastSubIndices[i] = lastSubIndex;
+        }
+      }
+      // Reset suffixLengthsReader's position.
+      suffixLengthsReader.setPosition(0);
+    } else {
       suffixes = new int[entCount];
-      //      TODO: remove postions if it is necessary.
+      // TODO: remove postions if it is necessary.
       postions = new int[entCount];
       if (isLeafBlock) {
         for (int i = 0; i < suffixes.length; i++) {
@@ -219,16 +265,24 @@ final class SegmentTermsEnumFrame {
         // Handle subCode for non leaf block.
         termExists = new FixedBitSet(entCount);
         subCodes = new long[entCount];
+        termBlockOrds = new int[entCount];
+        lastSubIndices = new int[entCount];
+        int termBlockOrd = 0;
+        int lastSubIndex = -1;
         for (int i = 0; i < suffixes.length; i++) {
           code = suffixLengthsReader.readVInt();
           suffixes[i] = code >>> 1;
           if ((code & 1) == 0) {
             termExists.set(i);
+            termBlockOrd++;
           } else {
             // read subCode.
             subCodes[i] = suffixLengthsReader.readVLong();
+            lastSubIndex = i;
           }
+          termBlockOrds[i] = termBlockOrd;
           postions[i] = suffixLengthsReader.getPosition();
+          lastSubIndices[i] = lastSubIndex;
         }
       }
       // Reset suffixLengthsReader's position.
@@ -566,7 +620,7 @@ final class SegmentTermsEnumFrame {
   public SeekStatus scanToTerm(BytesRef target, boolean exactOnly) throws IOException {
     return isLeafBlock
         ? binarySearchTermLeaf(target, exactOnly)
-        : scanToTermNonLeaf(target, exactOnly);
+        : binarySearchNonLeaf(target, exactOnly);
   }
 
   private int startBytePos;
@@ -692,120 +746,6 @@ final class SegmentTermsEnumFrame {
     return SeekStatus.END;
   }
 
-  // TODO: take this to scanToTermNonLeaf
-  // Target's prefix matches this block's prefix;
-  // But these suffixes' length are not same,
-  // we binary search the entries check if the suffix matches.
-  private SeekStatus binarySearchTermLeafUnEqual(BytesRef target, boolean exactOnly)
-      throws IOException {
-    // if (DEBUG) System.out.println("    binarySearchTermLeaf: block fp=" + fp + " prefix=" +
-    // prefix + "
-    // nextEnt=" + nextEnt + " (of " + entCount + ") target=" + brToString(target) + " term=" +
-    // brToString(term));
-
-    assert nextEnt != -1;
-
-    ste.termExists = true;
-    subCode = 0;
-
-    if (nextEnt == entCount) {
-      if (exactOnly) {
-        fillTerm();
-      }
-      return SeekStatus.END;
-    }
-
-    assert prefixMatches(target);
-    assert assertOffset(suffixes, offsets);
-
-    int start = nextEnt;
-    int end = entCount - 1;
-    // Binary search the entries (terms) in this leaf block:
-    int cmp = 0;
-    int lastGreaterPos = 0;
-    while (start <= end) {
-      int mid = (start + end) / 2;
-      nextEnt = mid + 1;
-      startBytePos = offsets[mid];
-      suffix = suffixes[mid];
-      suffixesReader.setPosition(startBytePos + suffix);
-
-      // TODO: is it necessary to set suffixLengthsReader's position?
-      suffixLengthsReader.setPosition(postions[mid]);
-
-      // Binary search bytes in the suffix, comparing to the target
-      cmp =
-          Arrays.compareUnsigned(
-              suffixBytes,
-              startBytePos,
-              startBytePos + suffix,
-              target.bytes,
-              target.offset + prefix,
-              target.offset + target.length);
-      if (cmp < 0) {
-        start = mid + 1;
-      } else if (cmp > 0) {
-        end = mid - 1;
-        lastGreaterPos = mid;
-      } else {
-        // Exact match!
-
-        // This cannot be a sub-block because we
-        // would have followed the index to this
-        // sub-block from the start:
-
-        assert ste.termExists;
-        fillTerm();
-        // if (DEBUG) System.out.println("        found!");
-        //        System.out.println("target: " + target.utf8ToString()
-        //        + ", nextEnt: " + nextEnt
-        //        + ", startBytePos: " + startBytePos
-        //        + ", suffix: " + suffix
-        //        + ", lenPos: " + suffixLengthsReader.getPosition()
-        //        + ", sufPos: " + suffixesReader.getPosition()
-        //        );
-        return SeekStatus.FOUND;
-      }
-    }
-
-    // It is possible (and OK) that terms index pointed us
-    // at this block, but, we searched the entire block and
-    // did not find the term to position to.  This happens
-    // when the target is after the last term in the block
-    // (but, before the next term in the index).  EG
-    // target could be foozzz, and terms index pointed us
-    // to the foo* block, but the last term in this block
-    // was fooz (and, eg, first term in the next block will
-    // bee fop).
-    // if (DEBUG) System.out.println("      block end");
-    SeekStatus seekStatus = end < entCount - 1 ? SeekStatus.NOT_FOUND : SeekStatus.END;
-    if (exactOnly || seekStatus == SeekStatus.NOT_FOUND) {
-      // If binary search ended at the less term, and greater term exists.
-      // We need to advance to the greater term.
-      if (cmp < 0 && seekStatus == SeekStatus.NOT_FOUND) {
-        suffix = suffixes[lastGreaterPos];
-        startBytePos = offsets[lastGreaterPos];
-        suffixesReader.setPosition(startBytePos + suffix);
-        nextEnt = lastGreaterPos + 1;
-
-        suffixLengthsReader.setPosition(postions[lastGreaterPos]);
-      }
-      fillTerm();
-    }
-
-    // TODO: not consistent that in the
-    // not-exact case we don't next() into the next
-    // frame here
-    //    System.out.println("target: " + target.utf8ToString()
-    //        + ", nextEnt: " + nextEnt
-    //        + ", startBytePos: " + startBytePos
-    //        + ", suffix: " + suffix
-    //        + ", lenPos: " + suffixLengthsReader.getPosition()
-    //        + ", sufPos: " + suffixesReader.getPosition()
-    //    );
-    return seekStatus;
-  }
-
   private int[] getOffsets(int[] suffixes) {
     int[] offsets = new int[suffixes.length];
     offsets[0] = 0;
@@ -860,7 +800,6 @@ final class SegmentTermsEnumFrame {
 
     assert prefixMatches(target);
 
-    suffix = suffixLengthsReader.readVInt();
     // TODO early terminate when target length unequals suffix + prefix.
     // But we need to keep the same status with scanToTermLeaf.
     int start = nextEnt;
@@ -895,6 +834,19 @@ final class SegmentTermsEnumFrame {
 
         assert ste.termExists;
         fillTerm();
+        //        try{
+        //          System.out.println("target: " + target.utf8ToString()
+        //              + ", nextEnt: " + nextEnt
+        //              + ", startBytePos: " + startBytePos
+        //              + ", suffix: " + suffix
+        //              + ", lenPos: " + suffixLengthsReader.getPosition()
+        //              + ", sufPos: " + suffixesReader.getPosition()
+        //              + ", term: " + ste.term().utf8ToString()
+        //              + ", termBlockOrd: " +state.termBlockOrd
+        //          );
+        //        }catch (AssertionError e){
+        //          System.out.println("target");
+        //        }
         // if (DEBUG) System.out.println("        found!");
         return SeekStatus.FOUND;
       }
@@ -921,10 +873,159 @@ final class SegmentTermsEnumFrame {
       }
       fillTerm();
     }
+    //    try{
+    //      System.out.println("target: " + target.utf8ToString()
+    //          + ", nextEnt: " + nextEnt
+    //          + ", startBytePos: " + startBytePos
+    //          + ", suffix: " + suffix
+    //          + ", lenPos: " + suffixLengthsReader.getPosition()
+    //          + ", sufPos: " + suffixesReader.getPosition()
+    //          + ", term: " + ste.term().utf8ToString()
+    //          + ", termBlockOrd: " +state.termBlockOrd
+    //      );
+    //    }catch (AssertionError e){
+    //      System.out.println("target");
+    //    }
+    // TODO: not consistent that in the
+    // not-exact case we don't next() into the next
+    // frame here
+    return seekStatus;
+  }
+
+  // TODO: take this to scanToTermNonLeaf
+  // Target's prefix matches this block's prefix;
+  // But these suffixes' length are not same,
+  // we binary search the entries check if the suffix matches.
+  private SeekStatus binarySearchTermLeafUnEqual(BytesRef target, boolean exactOnly)
+      throws IOException {
+    // if (DEBUG) System.out.println("    binarySearchTermLeaf: block fp=" + fp + " prefix=" +
+    // prefix + "
+    // nextEnt=" + nextEnt + " (of " + entCount + ") target=" + brToString(target) + " term=" +
+    // brToString(term));
+
+    assert nextEnt != -1;
+
+//        try {
+//          if (target.utf8ToString().equals("439")) {
+//            System.out.println();
+//          }
+//        } catch (AssertionError e) {
+//
+//        }
+
+    ste.termExists = true;
+    subCode = 0;
+
+    if (nextEnt == entCount) {
+      if (exactOnly) {
+        fillTerm();
+      }
+      return SeekStatus.END;
+    }
+
+    assert prefixMatches(target);
+    assert assertOffset(suffixes, offsets);
+
+    int start = nextEnt;
+    int end = entCount - 1;
+    // Binary search the entries (terms) in this leaf block:
+    int cmp = 0;
+    int lastGreaterPos = 0;
+    while (start <= end) {
+      int mid = (start + end) / 2;
+      nextEnt = mid + 1;
+      startBytePos = offsets[mid];
+      suffix = suffixes[mid];
+      suffixesReader.setPosition(startBytePos + suffix);
+
+      // TODO: is it necessary to set suffixLengthsReader's position?
+      suffixLengthsReader.setPosition(postions[mid]);
+
+      // Binary search bytes in the suffix, comparing to the target
+      cmp =
+          Arrays.compareUnsigned(
+              suffixBytes,
+              startBytePos,
+              startBytePos + suffix,
+              target.bytes,
+              target.offset + prefix,
+              target.offset + target.length);
+      if (cmp < 0) {
+        start = mid + 1;
+      } else if (cmp > 0) {
+        end = mid - 1;
+        lastGreaterPos = mid;
+      } else {
+        // Exact match!
+
+        // This cannot be a sub-block because we
+        // would have followed the index to this
+        // sub-block from the start:
+
+        assert ste.termExists;
+        fillTerm();
+        // if (DEBUG) System.out.println("        found!");
+//                try{
+//                  System.out.println("target: " + target.utf8ToString()
+//                      + ", nextEnt: " + nextEnt
+//                      + ", startBytePos: " + startBytePos
+//                      + ", suffix: " + suffix
+//                      + ", lenPos: " + suffixLengthsReader.getPosition()
+//                      + ", sufPos: " + suffixesReader.getPosition()
+//                      + ", term: " + ste.term().utf8ToString()
+//                      + ", termBlockOrd: " +state.termBlockOrd
+//                  );
+//                }catch (AssertionError e){
+//                  System.out.println("target");
+//                }
+        return SeekStatus.FOUND;
+      }
+    }
+
+    // It is possible (and OK) that terms index pointed us
+    // at this block, but, we searched the entire block and
+    // did not find the term to position to.  This happens
+    // when the target is after the last term in the block
+    // (but, before the next term in the index).  EG
+    // target could be foozzz, and terms index pointed us
+    // to the foo* block, but the last term in this block
+    // was fooz (and, eg, first term in the next block will
+    // bee fop).
+    // if (DEBUG) System.out.println("      block end");
+    SeekStatus seekStatus = end < entCount - 1 ? SeekStatus.NOT_FOUND : SeekStatus.END;
+    if (exactOnly || seekStatus == SeekStatus.NOT_FOUND) {
+      // If binary search ended at the less term, and greater term exists.
+      // We need to advance to the greater term.
+      if (cmp < 0 && seekStatus == SeekStatus.NOT_FOUND) {
+        // TODO: lastGreaterPos should equal nextEnt, we could remove lastGreaterPos.
+        assert lastGreaterPos == nextEnt;
+        suffix = suffixes[lastGreaterPos];
+        startBytePos = offsets[lastGreaterPos];
+        suffixesReader.setPosition(startBytePos + suffix);
+        nextEnt = lastGreaterPos + 1;
+
+        suffixLengthsReader.setPosition(postions[lastGreaterPos]);
+      }
+      fillTerm();
+    }
 
     // TODO: not consistent that in the
     // not-exact case we don't next() into the next
     // frame here
+//        try{
+//          System.out.println("target: " + target.utf8ToString()
+//              + ", nextEnt: " + nextEnt
+//              + ", startBytePos: " + startBytePos
+//              + ", suffix: " + suffix
+//              + ", lenPos: " + suffixLengthsReader.getPosition()
+//              + ", sufPos: " + suffixesReader.getPosition()
+//              + ", term: " + ste.term().utf8ToString()
+//              + ", termBlockOrd: " +state.termBlockOrd
+//          );
+//        }catch (AssertionError e){
+//          System.out.println("target");
+//        }
+
     return seekStatus;
   }
 
@@ -938,6 +1039,14 @@ final class SegmentTermsEnumFrame {
     // " term=" + ToStringUtils.bytesRefToString(term));
 
     assert nextEnt != -1;
+
+//            try {
+//              if (target.utf8ToString().equals("439")) {
+//                System.out.println();
+//              }
+//            } catch (AssertionError e) {
+//
+//            }
 
     if (nextEnt == entCount) {
       if (exactOnly) {
@@ -999,6 +1108,21 @@ final class SegmentTermsEnumFrame {
         // if (DEBUG) System.out.println("        maybe done exactOnly=" + exactOnly +
         // " ste.termExists=" + ste.termExists);
 
+//                try{
+//                  System.out.println("target: " + target.utf8ToString()
+//                      + ", nextEnt: " + nextEnt
+//                      + ", startBytePos: " + startBytePos
+//                      + ", suffix: " + suffix
+//                      + ", lenPos: " + suffixLengthsReader.getPosition()
+//                      + ", sufPos: " + suffixesReader.getPosition()
+//                      + ", term: " + ste.term().utf8ToString()
+//                      + ", termBlockOrd: " + state.termBlockOrd
+//                      + ", lastSubFP: " + lastSubFP
+//                  );
+//                }catch (AssertionError e){
+//                  System.out.println("target");
+//                }
+
         if (!exactOnly && !ste.termExists) {
           // System.out.println("  now pushFrame");
           // TODO this
@@ -1025,6 +1149,22 @@ final class SegmentTermsEnumFrame {
 
         assert ste.termExists;
         fillTerm();
+//                try{
+//                  System.out.println("target: " + target.utf8ToString()
+//                      + ", nextEnt: " + nextEnt
+//                      + ", startBytePos: " + startBytePos
+//                      + ", suffix: " + suffix
+//                      + ", lenPos: " + suffixLengthsReader.getPosition()
+//                      + ", sufPos: " + suffixesReader.getPosition()
+//                      + ", term: " + ste.term().utf8ToString()
+//                      + ", termBlockOrd: " + state.termBlockOrd
+//                      + ", lastSubFP: " + lastSubFP
+//
+//
+//                  );
+//                }catch (AssertionError e){
+//                  System.out.println("target");
+//                }
         // if (DEBUG) System.out.println("        found!");
         return SeekStatus.FOUND;
       }
@@ -1044,15 +1184,34 @@ final class SegmentTermsEnumFrame {
       fillTerm();
     }
 
+//        try{
+//          System.out.println("target: " + target.utf8ToString()
+//              + ", nextEnt: " + nextEnt
+//              + ", startBytePos: " + startBytePos
+//              + ", suffix: " + suffix
+//              + ", lenPos: " + suffixLengthsReader.getPosition()
+//              + ", sufPos: " + suffixesReader.getPosition()
+//              + ", term: " + ste.term().utf8ToString()
+//              + ", termBlockOrd: " +state.termBlockOrd
+//              + ", lastSubFP: " + lastSubFP
+//          );
+//        }catch (AssertionError e){
+//          System.out.println("target");
+//        }
     // TODO: not consistent that in the
     // not-exact case we don't next() into the next
     // frame here
     return SeekStatus.END;
   }
 
-  // Target's prefix matches this block's prefix; we
-  // binary search the entries check if the suffix matches.
   public SeekStatus binarySearchNonLeaf(BytesRef target, boolean exactOnly) throws IOException {
+    return allEqual
+        ? binarySearchNonLeafAllEqual(target, exactOnly)
+        : binarySearchNonLeafUnEqual(target, exactOnly);
+  }
+
+  private SeekStatus binarySearchNonLeafAllEqual(BytesRef target, boolean exactOnly)
+      throws IOException {
 
     // if (DEBUG) System.out.println("    scanToTermNonLeaf: block fp=" + fp + " prefix=" + prefix +
     // " nextEnt=" + nextEnt + " (of " + entCount + ") target=" +
@@ -1060,6 +1219,13 @@ final class SegmentTermsEnumFrame {
     // " term=" + ToStringUtils.bytesRefToString(term));
 
     assert nextEnt != -1;
+    //    try {
+    //      if (target.utf8ToString().equals("doc9940")) {
+    //        System.out.println();
+    //      }
+    //    } catch (AssertionError e) {
+    //
+    //    }
 
     if (nextEnt == entCount) {
       if (exactOnly) {
@@ -1076,24 +1242,26 @@ final class SegmentTermsEnumFrame {
     int end = entCount - 1;
     // Binary search the entries (terms) in this non leaf block:
     int cmp = 0;
-    int termLen = 0;
-    int lastMid = 0;
+    int lastGreaterPos = 0;
+    int mid = 0;
 
     while (start <= end) {
-      int mid = (start + end) / 2;
+      mid = (start + end) / 2;
       nextEnt = mid + 1;
-      startBytePos = offsets[mid];
-      suffix = suffixes[mid];
+      startBytePos = mid * suffix;
       suffixesReader.setPosition(startBytePos + suffix);
 
-      termLen = prefix + suffix;
+      // TODO: is it necessary to set suffixLengthsReader's position?
+      suffixLengthsReader.setPosition(postions[mid]);
+
       ste.termExists = termExists.get(mid);
+      // TODO: remove termBlockOrd, lastSubFP.
       if (ste.termExists) {
         state.termBlockOrd++;
         subCode = 0;
       } else {
-        //        subCode = subCodes[mid];
-        //        lastSubFP = fp - subCode;
+        subCode = subCodes[mid];
+        lastSubFP = fp - subCode;
       }
 
       // Binary search bytes in the suffix, comparing to the target
@@ -1109,17 +1277,38 @@ final class SegmentTermsEnumFrame {
         start = mid + 1;
       } else if (cmp > 0) {
         end = mid - 1;
-        lastMid = mid;
+        lastGreaterPos = mid;
       } else {
         // Exact match!
 
         // This cannot be a sub-block because we
         // would have followed the index to this
         // sub-block from the start:
-
+        state.termBlockOrd = termBlockOrds[mid];
         assert ste.termExists;
+
+        if (lastSubIndices[nextEnt - 1] != -1){
+          lastSubFP = fp - subCodes[lastSubIndices[nextEnt - 1]];
+        }else{
+          lastSubFP = -1;
+        }
+
         fillTerm();
         // if (DEBUG) System.out.println("        found!");
+        //        try{
+        //          System.out.println("target: " + target.utf8ToString()
+        //              + ", nextEnt: " + nextEnt
+        //              + ", startBytePos: " + startBytePos
+        //              + ", suffix: " + suffix
+        //              + ", lenPos: " + suffixLengthsReader.getPosition()
+        //              + ", sufPos: " + suffixesReader.getPosition()
+        //              + ", term: " + ste.term().utf8ToString()
+        //              + ", termBlockOrd: " +state.termBlockOrd
+        //          );
+        //        }catch (AssertionError e){
+        //          System.out.println("target");
+        //        }
+
         return SeekStatus.FOUND;
       }
     }
@@ -1134,34 +1323,268 @@ final class SegmentTermsEnumFrame {
     // was fooz (and, eg, first term in the next block will
     // bee fop).
     // if (DEBUG) System.out.println("      block end");
+    state.termBlockOrd = termBlockOrds[mid];
     SeekStatus seekStatus = end < entCount - 1 ? SeekStatus.NOT_FOUND : SeekStatus.END;
-    if (exactOnly || seekStatus == SeekStatus.NOT_FOUND) {
       // If binary search ended at the less term, and greater term exists.
       // We need to advance to the greater term.
-      if (cmp < 0 && seekStatus == SeekStatus.NOT_FOUND) {
-        startBytePos += suffix;
-        suffixesReader.skipBytes(suffix);
-        nextEnt++;
+      if (seekStatus == SeekStatus.NOT_FOUND) {
+        if (cmp < 0) {
+          // TODO: lastGreaterPos should equal nextEnt, we could remove lastGreaterPos.
+          assert lastGreaterPos == nextEnt;
+          subCode = subCodes[lastGreaterPos];
+          state.termBlockOrd = termBlockOrds[lastGreaterPos];
+          lastSubFP = fp - subCode;
+          startBytePos = lastGreaterPos * suffix;
+          suffixesReader.setPosition(startBytePos + suffix);
+          nextEnt = lastGreaterPos + 1;
+
+          suffixLengthsReader.setPosition(postions[lastGreaterPos]);
+        }
+        if (lastSubIndices[nextEnt - 1] != -1){
+          lastSubFP = fp - subCodes[lastSubIndices[nextEnt - 1]];
+        }else{
+          lastSubFP = -1;
+        }
+        fillTerm();
+        if (!exactOnly && !termExists.get(lastGreaterPos)) {
+          // System.out.println("  now pushFrame");
+          // TODO this
+          // We are on a sub-block, and caller wants
+          // us to position to the next term after
+          // the target, so we must recurse into the
+          // sub-frame(s):
+          ste.currentFrame = ste.pushFrame(null, ste.currentFrame.lastSubFP, prefix + suffix);
+          ste.currentFrame.loadBlock();
+          while (ste.currentFrame.next()) {
+            ste.currentFrame = ste.pushFrame(null, ste.currentFrame.lastSubFP, ste.term.length());
+            ste.currentFrame.loadBlock();
+          }
+        }
+      }else if(exactOnly){
+        if (lastSubIndices[nextEnt - 1] != -1){
+          lastSubFP = fp - subCodes[lastSubIndices[nextEnt - 1]];
+        }else{
+          lastSubFP = -1;
+        }
+        fillTerm();
+      }else{
+        if (lastSubIndices[nextEnt - 1] != -1){
+          lastSubFP = fp - subCodes[lastSubIndices[nextEnt - 1]];
+        }else{
+          lastSubFP = -1;
+        }
       }
-      fillTerm();
+    //    try{
+    //      System.out.println("target: " + target.utf8ToString()
+    //          + ", nextEnt: " + nextEnt
+    //          + ", startBytePos: " + startBytePos
+    //          + ", suffix: " + suffix
+    //          + ", lenPos: " + suffixLengthsReader.getPosition()
+    //          + ", sufPos: " + suffixesReader.getPosition()
+    //          + ", term: " + ste.term().utf8ToString()
+    //          + ", termBlockOrd: " +state.termBlockOrd
+    //      );
+    //    }catch (AssertionError e){
+    //      System.out.println("target");
+    //    }
+
+    // TODO: not consistent that in the
+    // not-exact case we don't next() into the next
+    // frame here
+    return seekStatus;
+  }
+
+  // Target's prefix matches this block's prefix; we
+  // binary search the entries check if the suffix matches.
+  private SeekStatus binarySearchNonLeafUnEqual(BytesRef target, boolean exactOnly)
+      throws IOException {
+
+    // if (DEBUG) System.out.println("    scanToTermNonLeaf: block fp=" + fp + " prefix=" + prefix +
+    // " nextEnt=" + nextEnt + " (of " + entCount + ") target=" +
+    // ToStringUtils.bytesRefToString(target) +
+    // " term=" + ToStringUtils.bytesRefToString(term));
+
+    assert nextEnt != -1;
+
+//            try {
+//              if (target.utf8ToString().equals("l")) {
+//                System.out.println();
+//              }
+//            } catch (AssertionError e) {
+//
+//            }
+
+    if (nextEnt == entCount) {
+      if (exactOnly) {
+        fillTerm();
+        ste.termExists = subCode == 0;
+      }
+      return SeekStatus.END;
     }
 
-    if (seekStatus == SeekStatus.NOT_FOUND && !exactOnly && !termExists.get(lastMid)) {
-      subCode = subCodes[lastMid];
-      lastSubFP = fp - subCode;
-      // System.out.println("  now pushFrame");
-      // TODO this
-      // We are on a sub-block, and caller wants
-      // us to position to the next term after
-      // the target, so we must recurse into the
-      // sub-frame(s):
-      ste.currentFrame = ste.pushFrame(null, ste.currentFrame.lastSubFP, termLen);
-      ste.currentFrame.loadBlock();
-      while (ste.currentFrame.next()) {
-        ste.currentFrame = ste.pushFrame(null, ste.currentFrame.lastSubFP, ste.term.length());
-        ste.currentFrame.loadBlock();
+    assert prefixMatches(target);
+    assert assertOffset(suffixes, offsets);
+
+    int start = nextEnt;
+    int end = entCount - 1;
+    // Binary search the entries (terms) in this non leaf block:
+    int cmp = 0;
+    int lastGreaterPos = 0;
+    int mid = 0;
+
+    while (start <= end) {
+      mid = (start + end) / 2;
+      nextEnt = mid + 1;
+      startBytePos = offsets[mid];
+      suffix = suffixes[mid];
+      suffixesReader.setPosition(startBytePos + suffix);
+
+      // TODO: is it necessary to set suffixLengthsReader's position?
+      suffixLengthsReader.setPosition(postions[mid]);
+
+      ste.termExists = termExists.get(mid);
+      // TODO: remove termBlockOrd, lastSubFP.
+      // TODO: we need keep lastSubFP to ensure SegmentTermsEnum.next currentFrame.lastSubFP != lastFP correct.
+      if (ste.termExists) {
+        //        state.termBlockOrd++;
+        subCode = 0;
+      } else {
+        // TODO: remove them
+        subCode = subCodes[mid];
+        lastSubFP = fp - subCode;
+      }
+
+      // Binary search bytes in the suffix, comparing to the target
+      cmp =
+          Arrays.compareUnsigned(
+              suffixBytes,
+              startBytePos,
+              startBytePos + suffix,
+              target.bytes,
+              target.offset + prefix,
+              target.offset + target.length);
+      if (cmp < 0) {
+        start = mid + 1;
+      } else if (cmp > 0) {
+        end = mid - 1;
+        lastGreaterPos = mid;
+      } else {
+        // Exact match!
+
+        // This cannot be a sub-block because we
+        // would have followed the index to this
+        // sub-block from the start:
+
+        assert ste.termExists;
+        state.termBlockOrd = termBlockOrds[mid];
+
+        if (lastSubIndices[nextEnt - 1] != -1){
+          lastSubFP = fp - subCodes[lastSubIndices[nextEnt - 1]];
+        }else{
+          lastSubFP = -1;
+        }
+
+        fillTerm();
+        // if (DEBUG) System.out.println("        found!");
+
+//                try{
+//                  System.out.println("target: " + target.utf8ToString()
+//                      + ", nextEnt: " + nextEnt
+//                      + ", startBytePos: " + startBytePos
+//                      + ", suffix: " + suffix
+//                      + ", lenPos: " + suffixLengthsReader.getPosition()
+//                      + ", sufPos: " + suffixesReader.getPosition()
+//                      + ", term: " + ste.term().utf8ToString()
+//                      + ", termBlockOrd: " + state.termBlockOrd
+//                      + ", lastSubFP: " + lastSubFP
+//                  );
+//                }catch (AssertionError e){
+//                  System.out.println("target");
+//                }
+        return SeekStatus.FOUND;
       }
     }
+
+    // It is possible (and OK) that terms index pointed us
+    // at this block, but, we scanned the entire block and
+    // did not find the term to position to.  This happens
+    // when the target is after the last term in the block
+    // (but, before the next term in the index).  EG
+    // target could be foozzz, and terms index pointed us
+    // to the foo* block, but the last term in this block
+    // was fooz (and, eg, first term in the next block will
+    // bee fop).
+    // if (DEBUG) System.out.println("      block end");
+    state.termBlockOrd = termBlockOrds[mid];
+    SeekStatus seekStatus = end < entCount - 1 ? SeekStatus.NOT_FOUND : SeekStatus.END;
+      // If binary search ended at the less term, and greater term exists.
+      // We need to advance to the greater term.
+      if (seekStatus == SeekStatus.NOT_FOUND) {
+        if (cmp < 0) {
+          // TODO: lastGreaterPos should equal nextEnt, we could remove lastGreaterPos.
+          assert lastGreaterPos == nextEnt;
+          suffix = suffixes[lastGreaterPos];
+          subCode = subCodes[lastGreaterPos];
+          lastSubFP = fp - subCode;
+          state.termBlockOrd = termBlockOrds[lastGreaterPos];
+
+          startBytePos = offsets[lastGreaterPos];
+          suffixesReader.setPosition(startBytePos + suffix);
+          nextEnt = lastGreaterPos + 1;
+
+          suffixLengthsReader.setPosition(postions[lastGreaterPos]);
+        }
+
+        if (lastSubIndices[nextEnt - 1] != -1){
+          lastSubFP = fp - subCodes[lastSubIndices[nextEnt - 1]];
+        }else{
+          lastSubFP = -1;
+        }
+
+        fillTerm();
+        if (!exactOnly && !termExists.get(lastGreaterPos)) {
+          // System.out.println("  now pushFrame");
+          // TODO this
+          // We are on a sub-block, and caller wants
+          // us to position to the next term after
+          // the target, so we must recurse into the
+          // sub-frame(s):
+          ste.currentFrame = ste.pushFrame(null, ste.currentFrame.lastSubFP, prefix + suffix);
+          ste.currentFrame.loadBlock();
+          while (ste.currentFrame.next()) {
+            ste.currentFrame = ste.pushFrame(null, ste.currentFrame.lastSubFP, ste.term.length());
+            ste.currentFrame.loadBlock();
+          }
+        }
+      }else if(exactOnly){
+        if (lastSubIndices[nextEnt - 1] != -1){
+          lastSubFP = fp - subCodes[lastSubIndices[nextEnt - 1]];
+        }else{
+          lastSubFP = -1;
+        }
+        fillTerm();
+      }else{
+        if (lastSubIndices[nextEnt - 1] != -1){
+          lastSubFP = fp - subCodes[lastSubIndices[nextEnt - 1]];
+        }else{
+          lastSubFP = -1;
+        }
+      }
+
+//            try{
+//              System.out.println("target: " + target.utf8ToString()
+//                  + ", nextEnt: " + nextEnt
+//                  + ", startBytePos: " + startBytePos
+//                  + ", suffix: " + suffix
+//                  + ", lenPos: " + suffixLengthsReader.getPosition()
+//                  + ", sufPos: " + suffixesReader.getPosition()
+//                  + ", term: " + ste.term().utf8ToString()
+//                  + ", termBlockOrd: " +state.termBlockOrd
+//                  + ", lastSubFP: " + lastSubFP
+//              );
+//            }catch (AssertionError e){
+//              System.out.println("target");
+//            }
 
     // TODO: not consistent that in the
     // not-exact case we don't next() into the next

@@ -14,27 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.lucene.search;
+package org.apache.lucene.search.similarities;
 
-/**
- * Throw this exception in {@link LeafCollector#collect(int)} to prematurely terminate collection of
- * the current leaf.
- *
- * <p>Note: IndexSearcher swallows this exception and never re-throws it. As a consequence, you
- * should not catch it when calling the different search methods that {@link IndexSearcher} exposes
- * as it is unnecessary and might hide misuse of this exception.
- */
-@SuppressWarnings("serial")
-public final class CollectionTerminatedException extends RuntimeException {
+import org.apache.lucene.search.CollectionStatistics;
+import org.apache.lucene.search.TermStatistics;
 
-  /** Sole constructor. */
-  public CollectionTerminatedException() {
+/** Similarity that returns the raw TF as score. */
+public class RawTFSimilarity extends Similarity {
+
+  /** Default constructor: parameter-free */
+  public RawTFSimilarity() {
     super();
   }
 
+  /** Primary constructor. */
+  public RawTFSimilarity(boolean discountOverlaps) {
+    super(discountOverlaps);
+  }
+
   @Override
-  public Throwable fillInStackTrace() {
-    // never re-thrown so we can save the expensive stacktrace
-    return this;
+  public SimScorer scorer(
+      float boost, CollectionStatistics collectionStats, TermStatistics... termStats) {
+    return new SimScorer() {
+      @Override
+      public float score(float freq, long norm) {
+        return boost * freq;
+      }
+    };
   }
 }

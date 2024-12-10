@@ -16,15 +16,33 @@
  */
 package org.apache.lucene.search;
 
-/**
- * Used by {@link BulkScorer}s that need to pass a {@link Scorable} to {@link
- * LeafCollector#setScorer}.
- */
-final class Score extends Scorable {
+import java.io.IOException;
+
+/** Simplest implementation of {@link Scorable}, implemented via simple getters and setters. */
+final class SimpleScorable extends Scorable {
   float score;
+  float minCompetitiveScore;
+
+  /** Sole constructor. */
+  public SimpleScorable() {}
 
   @Override
   public float score() {
     return score;
+  }
+
+  /** Set the score. */
+  public void setScore(float score) {
+    this.score = score;
+  }
+
+  /** Get the min competitive score. */
+  public float minCompetitiveScore() {
+    return minCompetitiveScore;
+  }
+
+  @Override
+  public void setMinCompetitiveScore(float minScore) throws IOException {
+    minCompetitiveScore = minScore;
   }
 }

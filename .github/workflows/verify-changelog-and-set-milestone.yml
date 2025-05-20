@@ -14,6 +14,7 @@ jobs:
   changelog-verifier-and-milestone-setter:
     name: Verify Change Log Entry and Set Milestone
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
 
     steps:
       - name: Checkout repository
@@ -58,6 +59,7 @@ jobs:
           echo "Diff:"
           if git diff --exit-code --name-only $BASE_COMMIT HEAD -- ${{ env.CHANGE_LOG_FILE }}; then
             echo "Change log file:${{ env.CHANGE_LOG_FILE }} does not contains an entry corresponding to changes introduced in PR. Please add a changelog entry."
+            gh pr comment ${{ github.event.number }} --body "This PR does not have an entry in lucene/CHANGES.txt. Consider adding one. If the PR doesn't need a changelog entry, then add the skip-changelog-check label to it and you will stop receiving this reminder on future updates to the PR."
             exit 0
           else
             echo "${{ env.CHANGE_LOG_FILE }} contains change log entry. Proceeding with next steps."
@@ -117,6 +119,5 @@ jobs:
             echo "Milestone:${lucene_version} does not exist. Please create the milestone and run the workflow again."
             exit 0
           fi
-          # Will uncomment this line after we ensure it runs perfectly in production.
-          # gh pr edit ${{ github.event.number }} --milestone "${lucene_version}"
           echo "Adding/Updating milestone for the PR to:${lucene_version}"
+          gh pr edit ${{ github.event.number }} --milestone "${lucene_version}"

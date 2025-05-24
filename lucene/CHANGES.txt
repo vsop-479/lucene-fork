@@ -113,6 +113,12 @@ Optimizations
 * GITHUB#14609: Optimizes PointRangeQuery by rewriting to MatchAllDocsQuery/FieldExistsQuery/MatchNoDocsQuery if all
   docs in index are contained or excluded (Elliott Bradshaw)
 
+* GITHUB#14679: Optimize exhaustive evaluation of disjunctive queries.
+  (Adrien Grand)
+
+* GITHUB#14700: Return MatchNoDocsQuery when IndexOrDocValuesQuery::rewrite does not match
+  (Chris Hegarty)
+
 Bug Fixes
 ---------------------
 * GITHUB#14654: ValueSource.fromDoubleValuesSource(dvs).getSortField() would throw errors when
@@ -136,9 +142,9 @@ Other
 
 * GITHUB#14516: Move sloppySin into SloppyMath from GeoUtils (Ankit Jain)
 
-* GITHUB#14627, GITHUB#11920: Fix mock filesystem WindowsFS to also work on Windows.
-  This is required to make tests pass on Windows 11 which no longer has
-  all limitations of previous Windows versions.  (Uwe Schindler)
+* GITHUB#14627, GITHUB#11920, GITHUB#14706: Fix mock filesystem WindowsFS to also
+  work on Windows. This is required to make tests pass on Windows 11 which no
+  longer has all limitations of previous Windows versions.  (Uwe Schindler)
 
 
 ======================= Lucene 10.2.1 =======================

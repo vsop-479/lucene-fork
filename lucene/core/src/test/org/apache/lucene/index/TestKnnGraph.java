@@ -22,12 +22,7 @@ import static org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS;
 import static org.apache.lucene.util.hnsw.HnswGraphBuilder.randSeed;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import org.apache.lucene.codecs.Codec;
 import org.apache.lucene.codecs.lucene99.Lucene99HnswScalarQuantizedVectorsFormat;
@@ -114,6 +109,26 @@ public class TestKnnGraph extends LuceneTestCase {
         if (random().nextBoolean()) {
           values[i] = randomVector(dimension);
         }
+        add(iw, i, values[i]);
+      }
+      assertConsistentGraph(iw, values);
+    }
+  }
+
+  public void testHNSW() throws Exception {
+    try (Directory dir = newDirectory();
+        IndexWriter iw = new IndexWriter(dir, newIndexWriterConfig(null).setCodec(codec))) {
+      int numDoc = 10;
+      int dimension = 4;
+      float[][] values = new float[numDoc][];
+      Random random = new Random(5678);
+
+      for (int i = 0; i < numDoc; i++) {
+        values[i] = new float[dimension];
+        values[i][0] = random.nextFloat();
+        values[i][1] = random.nextFloat();
+        values[i][2] = random.nextFloat();
+        values[i][3] = random.nextFloat();
         add(iw, i, values[i]);
       }
       assertConsistentGraph(iw, values);

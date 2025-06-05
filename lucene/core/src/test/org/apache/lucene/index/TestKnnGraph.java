@@ -118,7 +118,7 @@ public class TestKnnGraph extends LuceneTestCase {
   public void testHNSW() throws Exception {
     try (Directory dir = newDirectory();
         IndexWriter iw = new IndexWriter(dir, newIndexWriterConfig(null).setCodec(codec))) {
-      int numDoc = 10;
+      int numDoc = 100;
       int dimension = 4;
       float[][] values = new float[numDoc][];
       Random random = new Random(5678);
@@ -129,6 +129,9 @@ public class TestKnnGraph extends LuceneTestCase {
         values[i][1] = random.nextFloat();
         values[i][2] = random.nextFloat();
         values[i][3] = random.nextFloat();
+        if (i % 9 == 0) {
+          System.out.println();
+        }
         add(iw, i, values[i]);
       }
       assertConsistentGraph(iw, values);

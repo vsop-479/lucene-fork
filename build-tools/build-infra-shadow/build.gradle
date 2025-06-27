@@ -1,5 +1,3 @@
-import com.diffplug.gradle.spotless.SpotlessTask
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -26,14 +24,17 @@ repositories {
   gradlePluginPortal()
 }
 
+// Convert a plugin dependency to a regular dependency so that we can
+// use [plugins] section in the top-level toml but declare regular
+// project dependencies here.
 static Provider<String> plugin(Provider<PluginDependency> plugin) {
   return plugin.map {
-    if (it.pluginId == "com.carrotsearch.gradle.buildinfra") {
-      return "${it.pluginId}:${it.pluginId}.gradle.plugin:${it.version}".toString()
-    } else if (it.pluginId == "de.thetaphi.forbiddenapis") {
+    if (it.pluginId == "de.thetaphi.forbiddenapis") {
+      // Uwe's forbiddenapis is on Maven Central, directly.
       return "de.thetaphi:forbiddenapis:${it.version}".toString()
     } else {
-      return "${it.pluginId}:${it.pluginId.replaceFirst(".*\\.", "")}-plugin-gradle:${it.version}".toString()
+      // maven artifact pattern for gradle's plugin repositories.
+      return "${it.pluginId}:${it.pluginId}.gradle.plugin:${it.version}".toString()
     }
   }
 }
@@ -43,10 +44,12 @@ dependencies {
   implementation localGroovy()
   implementation deps.commons.codec
   implementation deps.randomizedtesting.runner
+  implementation deps.gjf
+  implementation deps.jgit
 
-  implementation plugin(deps.plugins.carrotsearch.buildinfra)
+  implementation plugin(deps.plugins.carrotsearch.buildopts)
+  implementation plugin(deps.plugins.carrotsearch.dependencychecks)
   implementation plugin(deps.plugins.forbiddenapis)
-  implementation plugin(deps.plugins.spotless)
 }
 
 tasks.matching {
@@ -64,16 +67,10 @@ tasks.matching {
   enabled = false
 }
 
-// check spotless and other tasks into thinking their sources
-// are from build-infra.
+// make certain tasks think their sources are from build-infra.
 if (!isIdea) {
   plugins.withType(JavaPlugin).configureEach {
     SourceSet main = sourceSets.main
     main.java.srcDirs = rootProject.files("build-tools/build-infra/src/main/java")
-  }
-
-  tasks.withType(SpotlessTask).configureEach {
-    it.projectDir.set(rootProject.file("build-tools/build-infra"))
-    it.target
   }
 }

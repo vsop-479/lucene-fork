@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 
+
+import org.apache.lucene.gradle.plugins.gitinfo.GitInfoExtension
+
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
@@ -33,13 +36,14 @@ ext {
 }
 
 // Collect git revision.
-MapProperty<String, String> gitStatus = rootProject.extensions.getByName("gitinfo").getGitInfo()
+GitInfoExtension gitInfoExt = rootProject.extensions.getByName("gitinfo")
+MapProperty<String, String> gitStatus = gitInfoExt.getGitInfo()
 Provider<String> gitRev = gitStatus.getting("git.commit")
 
 // Prepare the "source" distribution artifact. We use raw git export, no additional complexity needed.
 Provider<RegularFile> sourceTgzFile = project.layout.buildDirectory.file("packages/lucene-${version}-src.tgz")
 tasks.register("assembleSourceTgz", {
-  description "Assemble source Lucene artifact as a .tgz file."
+  description = "Assemble source Lucene artifact as a .tgz file."
 
   inputs.property("git-revision", gitRev)
 
@@ -51,7 +55,7 @@ tasks.register("assembleSourceTgz", {
       workingDir = project.rootDir
 
       // An explicit GIT_DIR to prevent .git upward scanning if something goes wrong.
-      environment("GIT_DIR", dotGitPath.toString())
+      environment("GIT_DIR", gitInfoExt.getDotGitDir().get().asFile)
 
       args += [
         "archive",
@@ -124,7 +128,7 @@ tasks.register("prepareGitRev", {
 
 // Assemble everything needed in the release folder structure.
 tasks.register("assembleRelease", Sync, {
-  description "Assemble all Lucene artifacts for a release."
+  description = "Assemble all Lucene artifacts for a release."
 
   from(configurations.changesHtml, {
     into "changes"

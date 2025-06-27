@@ -14,27 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.lucene.search;
+package org.apache.lucene.gradle.plugins.gitinfo;
 
-import org.apache.lucene.util.PriorityQueue;
+import org.gradle.api.file.FileSystemLocation;
+import org.gradle.api.provider.MapProperty;
+import org.gradle.api.provider.Property;
 
-final class PhraseQueue extends PriorityQueue<PhrasePositions> {
-  PhraseQueue(int size) {
-    super(size);
-  }
+public abstract class GitInfoExtension {
+  public static final String NAME = "gitinfo";
 
-  @Override
-  protected final boolean lessThan(PhrasePositions pp1, PhrasePositions pp2) {
-    if (pp1.position == pp2.position)
-      // same doc and pp.position, so decide by actual term positions.
-      // rely on: pp.position == tp.position - offset.
-      if (pp1.offset == pp2.offset) {
-        return pp1.ord < pp2.ord;
-      } else {
-        return pp1.offset < pp2.offset;
-      }
-    else {
-      return pp1.position < pp2.position;
-    }
-  }
+  /**
+   * @return Return a map of key-value pairs extracted from the current git status.
+   */
+  public abstract MapProperty<String, String> getGitInfo();
+
+  /**
+   * @return Return the location of {@code .git} directory (or file, if worktrees are used).
+   */
+  public abstract Property<FileSystemLocation> getDotGitDir();
 }

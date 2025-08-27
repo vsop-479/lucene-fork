@@ -48,9 +48,7 @@ Improvements
   This avoids clashes with other ASM versions on classpath because it removes the dependency.
   (Uwe Schindler)
 
-* GITHUB#14226: Use optimistic-with-checking KNN Query execution strategy in place of cross-thread
-  global queue min-score checking. Improves performance and consistency. (Mike Sokolov, Dzung Bui,
-  Ben Trent)
+
 
 * GITHUB#15002: Remove synchronized WeakHashMap from IndexReader. This was added to help prevent
   SIGSEGV with the old unsafe "mmap hack", which has been replaced by MemorySegments.
@@ -128,6 +126,10 @@ API Changes
 * GITHUB#14978: Add a bulk scoring interface to RandomVectorScorer
   (Trevor McCulloch, Chris Hegarty)
 
+* GITHUB#15011: LeafReader#searchNearestVectors now accepts an AcceptDocs
+  instance instead of a Bits instance to identify document IDs to filter.
+  (Shubham Chaudhary, Adrien Grand)
+
 New Features
 ---------------------
 * GITHUB#15015: MultiIndexMergeScheduler: a production multi-tenant merge scheduler (Shawn Yarbrough)
@@ -167,10 +169,14 @@ Improvements
 
 * GITHUB#14737: Clean up redundant code and comments in query node classes. (Stefan Vodita)
 
-* GITHUB#14816: Expose search strategy in KNN query
+* GITHUB#14816: Expose search strategy in KNN query (Tommaso Teofili)
 
-* GITHUB#15089, GITHUB#15079: Refactor GroupVIntUtil functional interface lambda
-  which does not inline correctly in MemorySegmentIndexInput (Uwe Schindler, Robert Muir)
+* GITHUB#14226: Use optimistic-with-checking KNN Query execution strategy in place of cross-thread
+  global queue min-score checking. Improves performance and consistency. (Mike Sokolov, Dzung Bui,
+  Ben Trent)
+
+* GITHUB#15063: Use optimistic-with-checking KNN Query strategy for `DiversifyingChildren*` queries.
+  (Ben Trent)
 
 Optimizations
 ---------------------
@@ -276,6 +282,10 @@ Changes in Runtime Behavior
 
 Bug Fixes
 ---------------------
+
+* GITHUB#15120: Add estimatedByteSizes to merges kicked off by
+  IndexWriter.addIndexes(CodecReader[]) (Craig Perkins)
+
 * GITHUB*15025: flush segments in addIndexes, not in addIndexesReaderMerge;
   reduces extra needless merge activity
 
@@ -304,6 +314,12 @@ Bug Fixes
   iteration of sub-queries in BooleanQuery and DisjunctionMaxQuery. This
   resulted in query branches being wrongly ignored if the QueryIndex was
   built by a different JVM. (Luke Kot-Zaniewski)
+
+* GITHUB#15106: Fix infinite loop when RefCountedSharedArena's underlying
+  Arena#close fails due to concurrent usage of segments.  (Uwe Schindler)
+
+* GITHUB#14974: Lucene tessellator now always fails if it cannot process a hole instead of just ignoring it.
+   (Ignacio Vera)
 
 Build
 ---------------------

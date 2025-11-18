@@ -16,9 +16,16 @@
  */
 package org.apache.lucene.queryparser.surround.query;
 
+import java.io.IOException;
 import java.util.List;
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.queries.spans.SpanNearQuery;
+import org.apache.lucene.queries.spans.SpanNotQuery;
+import org.apache.lucene.queries.spans.SpanTermQuery;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.MatchNoDocsQuery;
 import org.apache.lucene.search.Query;
 
 /** Factory for prohibited clauses */
@@ -27,17 +34,49 @@ public class NotQuery extends ComposedQuery {
     super(queries, true /* infix */, opName);
   }
 
+//  @Override
+//  public Query makeLuceneQueryFieldNoBoost(String fieldName, BasicQueryFactory qf) {
+//    List<Query> luceneSubQueries = makeLuceneSubQueriesField(fieldName, qf);
+//    BooleanQuery.Builder bq = new BooleanQuery.Builder();
+//    bq.add(luceneSubQueries.get(0), BooleanClause.Occur.MUST);
+//    SrndBooleanQuery.addQueriesToBoolean(
+//        bq,
+//        // FIXME: do not allow weights on prohibited subqueries.
+//        luceneSubQueries.subList(1, luceneSubQueries.size()),
+//        // later subqueries: not required, prohibited
+//        BooleanClause.Occur.MUST_NOT);
+//    return bq.build();
+//  }
+
   @Override
   public Query makeLuceneQueryFieldNoBoost(String fieldName, BasicQueryFactory qf) {
+    return new NotRewriteQuery(this, fieldName, qf);
+  }
+
+  public Query getSpanNotQuery(IndexReader reader, String fieldName, BasicQueryFactory qf) throws IOException {
     List<Query> luceneSubQueries = makeLuceneSubQueriesField(fieldName, qf);
-    BooleanQuery.Builder bq = new BooleanQuery.Builder();
-    bq.add(luceneSubQueries.get(0), BooleanClause.Occur.MUST);
-    SrndBooleanQuery.addQueriesToBoolean(
-        bq,
-        // FIXME: do not allow weights on prohibited subqueries.
-        luceneSubQueries.subList(1, luceneSubQueries.size()),
-        // later subqueries: not required, prohibited
-        BooleanClause.Occur.MUST_NOT);
-    return bq.build();
+    Query query = luceneSubQueries.get(0);
+
+    // TODO: support more query types for include query.
+    assert query instanceof DistanceRewriteQuery;
+    if (query instanceof DistanceRewriteQuery) {
+      DistanceRewriteQuery dQ = (DistanceRewriteQuery) query;
+      // include query.
+      Query spanNearQuery = dQ.srndQuery.getSpanNearQuery(reader, fieldName, qf);
+      // if one term match no docs, we will get a MatchNoDocsQuery from getSpanNearQuery.
+      if (spanNearQuery instanceof SpanNearQuery == false) {
+        return new MatchNoDocsQuery();
+      }
+
+      // TODO: support more query types for exclude query.
+      Query notQuery = luceneSubQueries.get(1);
+      if (notQuery instanceof SimpleTermRewriteQuery) {
+        SimpleTermRewriteQuery sQ = (SimpleTermRewriteQuery) notQuery;
+        SpanTermQuery spanTermQuery =
+            new SpanTermQuery(new Term(fieldName, ((SrndTermQuery) sQ.srndQuery).getTermText()));
+        return new SpanNotQuery((SpanNearQuery)spanNearQuery, spanTermQuery);
+      }
+    }
+    return new MatchNoDocsQuery();
   }
 }

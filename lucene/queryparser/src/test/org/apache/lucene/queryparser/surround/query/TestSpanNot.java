@@ -43,6 +43,7 @@ public class TestSpanNot extends LuceneTestCase {
       addDoc(writer, "aaa bbb");
       addDoc(writer, "aaa bbb ccc");
       addDoc(writer, "aaa bbb ccc ddd");
+      addDoc(writer, "aaa bbb ccc ddd eee");
     }
     writer.close();
 
@@ -52,33 +53,29 @@ public class TestSpanNot extends LuceneTestCase {
   }
 
   public void testSurround() throws Exception {
-    // TODO: field:W(include_query, NOT, exclude_query)
     // org.apache.lucene.queryparser.surround.query.NotQuery
+    // origin: (aaa 161N ccc)
+    // step1: (aaa 10w ccc)
+    // step2: ((aaa 10w ccc) NOT ddd)
     String str = "content:((aaa 10W ccc) NOT ddd)";
     SrndQuery query = QueryParser.parse(str);
     Query rewritten = query.makeLuceneQueryField("content", new BasicQueryFactory(1000)).rewrite(searcher);
 
-
-    str = "content:((aaa 10W eee) NOT ddd)";
+    // origin: ((aaa OR bbb OR ccc) 161N (eee))
+    // step1: ((aaa OR bbb OR ccc) 10w (eee))
+    // step2: (((aaa OR bbb OR ccc) 10w (eee)) NOT ddd)
+    str = "content: (((aaa OR bbb OR ccc) 10w (eee)) NOT ddd)";
     query = QueryParser.parse(str);
     rewritten = query.makeLuceneQueryField("content", new BasicQueryFactory(1000)).rewrite(searcher);
 
-
-    str = "field:((耿 10W 我) NOT 点)";
+    // origin: ((eee) 161N (aaa OR bbb OR ccc))
+    // step1: ((eee) 10w (aaa OR bbb OR ccc))
+    // step2: (((eee) 10w (aaa OR bbb OR ccc)) NOT ddd)
+    str = "content: (((eee) 10w (aaa OR bbb OR ccc)) NOT ddd)";
     query = QueryParser.parse(str);
+    rewritten = query.makeLuceneQueryField("content", new BasicQueryFactory(1000)).rewrite(searcher);
 
-    str = "field:(耿 10W 我) NOT 点";
-    query = QueryParser.parse(str);
-
-    str = "field:cc 4N dd N ee";
-    query = QueryParser.parse(str);
-
-    str = "claims:((移 W 动 OR move OR 位 W 移 OR 转 W 移) 4W ((区 W 域) OR (地 W 区)) 6W ((区 W 域) OR (地 W 区)))";
-    query = QueryParser.parse(str);
-
-    str = "patent_name_brief:((粉碎效果) 10W (粉碎刀具) NOT)";
-    query = QueryParser.parse(str);
-    System.out.println("");
+    System.out.println();
   }
 
 //  public static void main(String[] args) throws Exception {

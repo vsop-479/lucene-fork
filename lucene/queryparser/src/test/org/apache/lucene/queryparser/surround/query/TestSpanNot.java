@@ -54,31 +54,65 @@ public class TestSpanNot extends LuceneTestCase {
 
   public void testSurround() throws Exception {
     // org.apache.lucene.queryparser.surround.query.NotQuery
-    // origin: (aaa 161N ccc)
+    // origin: (aaa SEN ccc)
     // step1: (aaa 10w ccc)
     // step2: ((aaa 10w ccc) NOT ddd)
-    String str = "content:((aaa 10W ccc) NOT ddd)";
+    String str = "content: ((aaa 10W ccc) NOT ddd)";
     SrndQuery query = QueryParser.parse(str);
     Query rewritten = query.makeLuceneQueryField("content", new BasicQueryFactory(1000)).rewrite(searcher);
 
-    // origin: ((aaa OR bbb OR ccc) 161N (eee))
+    String origin = "(aaa SEN ccc)";
+    origin = origin.replace("SEN", "10W");
+    origin = "content: (" + origin + " NOT ddd)";
+    assert origin.equals(str);
+
+    // origin: ((aaa OR bbb OR ccc) SEN (eee))
     // step1: ((aaa OR bbb OR ccc) 10w (eee))
     // step2: (((aaa OR bbb OR ccc) 10w (eee)) NOT ddd)
-    str = "content: (((aaa OR bbb OR ccc) 10w (eee)) NOT ddd)";
+    str = "content: (((aaa OR bbb OR ccc) 10W (eee)) NOT ddd)";
     query = QueryParser.parse(str);
     rewritten = query.makeLuceneQueryField("content", new BasicQueryFactory(1000)).rewrite(searcher);
 
-    // origin: ((eee) 161N (aaa OR bbb OR ccc))
+    origin = "((aaa OR bbb OR ccc) SEN (eee))";
+    origin = origin.replace("SEN", "10W");
+    origin = "content: (" + origin + " NOT ddd)";
+    assert origin.equals(str);
+
+    // origin: ((eee) SEN (aaa OR bbb OR ccc))
     // step1: ((eee) 10w (aaa OR bbb OR ccc))
     // step2: (((eee) 10w (aaa OR bbb OR ccc)) NOT ddd)
-    str = "content: (((eee) 10w (aaa OR bbb OR ccc)) NOT ddd)";
+    str = "content: (((eee) 10W (aaa OR bbb OR ccc)) NOT ddd)";
     query = QueryParser.parse(str);
     rewritten = query.makeLuceneQueryField("content", new BasicQueryFactory(1000)).rewrite(searcher);
+
+    origin = "((eee) SEN (aaa OR bbb OR ccc))";
+    origin = origin.replace("SEN", "10W");
+    origin = "content: (" + origin + " NOT ddd)";
+    assert origin.equals(str);
+
+    // origin: ((aaa or bbb) SEN (bbb or ccc) SEN (ccc or eee))
+    // step1: ((aaa or bbb) 10w (bbb or ccc) 10w (ccc or eee))
+    // step2: (((aaa or bbb) 10w (bbb or ccc) 10w (ccc or eee)) NOT ddd)
+    str = "content: (((aaa or bbb) 10W (bbb or ccc) 10W (ccc or eee)) NOT ddd)";
+    query = QueryParser.parse(str);
+    rewritten = query.makeLuceneQueryField("content", new BasicQueryFactory(1000)).rewrite(searcher);
+
+    origin = "((aaa or bbb) SEN (bbb or ccc) SEN (ccc or eee))";
+    origin = origin.replace("SEN", "10W");
+    origin = "content: (" + origin + " NOT ddd)";
+    assert origin.equals(str);
 
     System.out.println();
   }
 
-//  public static void main(String[] args) throws Exception {
+  @Override
+  public void tearDown() throws Exception {
+    super.tearDown();
+    reader.close();
+    rd.close();
+  }
+
+  //  public static void main(String[] args) throws Exception {
 //    reader = DirectoryReader.open(newDirectory());
 //    searcher = newSearcher(reader);
 //

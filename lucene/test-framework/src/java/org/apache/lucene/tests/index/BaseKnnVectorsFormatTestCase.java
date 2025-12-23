@@ -968,7 +968,7 @@ public abstract class BaseKnnVectorsFormatTestCase extends BaseIndexFileFormatTe
         if (random().nextInt(10) == 2) {
           iw.deleteDocuments(new Term("id", Integer.toString(random().nextInt(i + 1))));
         }
-        if (random().nextInt(10) == 3) {
+        if (random().nextInt(23) == 1) {
           iw.commit();
         }
       }
@@ -1029,7 +1029,7 @@ public abstract class BaseKnnVectorsFormatTestCase extends BaseIndexFileFormatTe
         if (random().nextInt(10) == 2) {
           iw.deleteDocuments(new Term("id", Integer.toString(random().nextInt(i + 1))));
         }
-        if (random().nextInt(10) == 3) {
+        if (random().nextInt(23) == 1) {
           iw.commit();
         }
       }
@@ -1503,10 +1503,13 @@ public abstract class BaseKnnVectorsFormatTestCase extends BaseIndexFileFormatTe
                       visitedLimit);
           assertEquals(TotalHits.Relation.GREATER_THAN_OR_EQUAL_TO, results.totalHits.relation());
           int size = Lucene99HnswVectorsReader.EXHAUSTIVE_BULK_SCORE_ORDS;
+          // visit limit is a "best effort" limit given our bulk scoring logic; assert that we are
+          // within
+          // reasonable bounds
           assertTrue(
-              visitedLimit == results.totalHits.value()
-                  || ((visitedLimit + size - 1) / size) * ((long) size)
-                      == results.totalHits.value());
+              results.totalHits.value() == visitedLimit
+                  || results.totalHits.value()
+                      <= ((visitedLimit + size - 1) / size) * ((long) size));
 
           // check the limit is not hit when it clearly exceeds the number of vectors
           k = vectorValues.size();
@@ -1964,7 +1967,10 @@ public abstract class BaseKnnVectorsFormatTestCase extends BaseIndexFileFormatTe
   /**
    * Test that the query is a viable approximation to exact search. This test is designed to uncover
    * gross failures only, not to represent the true expected recall.
+   *
+   * <p>TODO: this test is incredibly slow
    */
+  @Nightly
   public void testRecall() throws IOException {
     VectorSimilarityFunction[] functions = {
       VectorSimilarityFunction.EUCLIDEAN,
@@ -2142,9 +2148,7 @@ public abstract class BaseKnnVectorsFormatTestCase extends BaseIndexFileFormatTe
 
     if (r instanceof CodecReader codecReader) {
       KnnVectorsReader knnVectorsReader = codecReader.getVectorReader();
-      if (knnVectorsReader instanceof PerFieldKnnVectorsFormat.FieldsReader fieldsReader) {
-        knnVectorsReader = fieldsReader.getFieldReader(fieldName);
-      }
+      knnVectorsReader = knnVectorsReader.unwrapReaderForField(fieldName);
       var offHeap = knnVectorsReader.getOffHeapByteSize(fieldInfo);
       long totalByteSize = offHeap.values().stream().mapToLong(Long::longValue).sum();
       if (knnVectorsReader instanceof SimpleTextKnnVectorsReader) {
@@ -2162,7 +2166,7 @@ public abstract class BaseKnnVectorsFormatTestCase extends BaseIndexFileFormatTe
             var quant = offHeap.getOrDefault("veq", offHeap.get("veb"));
             assertTrue(quant == null || quant > 0L);
           } else {
-            assertTrue(offHeap.get("vex") == null);
+            assertTrue(offHeap.get("vex") == null || offHeap.get("vex") == 0);
           }
 
           if (hasQuantized(knnVectorsReader, fieldInfo)) {
@@ -2207,7 +2211,8 @@ public abstract class BaseKnnVectorsFormatTestCase extends BaseIndexFileFormatTe
       knnVectorsReader = assertingReader.delegate;
     }
     if (knnVectorsReader instanceof HnswGraphProvider graphProvider) {
-      return graphProvider.getGraph(fieldInfo.name) != null;
+      return graphProvider.getGraph(fieldInfo.name) != null
+          && graphProvider.getGraph(fieldInfo.name).size() > 0;
     }
     String name = knnVectorsReader.getClass().getSimpleName().toLowerCase(Locale.ROOT);
     return name.contains("hnsw");

@@ -457,11 +457,6 @@ public abstract class Node {
   /** Insert the child node into this with the index byte. */
   public abstract Node insert(Node childNode, byte indexByte);
 
-  /** Insert the LeafNode as a child of the current internal node. */
-  public static Node insertLeaf(Node current, LeafNode childNode, byte indexByte) {
-    return current.insert(childNode, indexByte);
-  }
-
   /**
    * copy the prefix and output between two nodes
    *

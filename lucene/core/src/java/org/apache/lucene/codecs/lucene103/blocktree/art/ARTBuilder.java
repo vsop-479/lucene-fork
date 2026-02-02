@@ -293,7 +293,7 @@ public class ARTBuilder {
     }
     // insert the key as a child leaf node of the current internal node
     LeafNode leafNode = new LeafNode(key, output);
-    Node freshOne = Node.insertLeaf(node, leafNode, key.bytes[depth]);
+    Node freshOne = node.insert(leafNode, key.bytes[depth]);
     updateKey(leafNode, depth + 1);
     return freshOne;
   }

@@ -186,7 +186,8 @@ public class Node48 extends Node {
     // TODO: Use mask can save store, but it is hard to say whether benefit to performance.
     dataOutput.writeInt(getMask());
     for (int i = 0; i < 32; i++) {
-      // TODO: We can calculate mask in this loop, and write back it. But this will need to implement IndexOutput#setFilePointer,
+      // TODO: We can calculate mask in this loop, and write back it. But this will need to
+      // implement IndexOutput#setFilePointer,
       // And write back may harm performance. Maybe we can calculate mask in when inserting node.
       if (childIndex[i] != -1) {
         dataOutput.writeLong(Long.reverseBytes(childIndex[i]));

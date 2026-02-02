@@ -35,23 +35,23 @@ public class Node16 extends Node {
 
   @Override
   public int getChildPos(byte indexByte) {
-      byte[] firstBytes = LongUtils.toBDBytes(firstChildIndex);
-      if (childrenCount <= 8) {
-        return Node.binarySearch(firstBytes, 0, childrenCount, indexByte);
+    byte[] firstBytes = LongUtils.toBDBytes(firstChildIndex);
+    if (childrenCount <= 8) {
+      return Node.binarySearch(firstBytes, 0, childrenCount, indexByte);
+    } else {
+      int pos = Node.binarySearch(firstBytes, 0, 8, indexByte);
+      if (pos != ILLEGAL_IDX) {
+        return pos;
       } else {
-        int pos = Node.binarySearch(firstBytes, 0, 8, indexByte);
+        byte[] secondBytes = LongUtils.toBDBytes(secondChildIndex);
+        pos = Node.binarySearch(secondBytes, 0, (childrenCount - 8), indexByte);
         if (pos != ILLEGAL_IDX) {
-          return pos;
+          return 8 + pos;
         } else {
-          byte[] secondBytes = LongUtils.toBDBytes(secondChildIndex);
-          pos = Node.binarySearch(secondBytes, 0, (childrenCount - 8), indexByte);
-          if (pos != ILLEGAL_IDX) {
-            return 8 + pos;
-          } else {
-            return ILLEGAL_IDX;
-          }
+          return ILLEGAL_IDX;
         }
       }
+    }
   }
 
   @Override

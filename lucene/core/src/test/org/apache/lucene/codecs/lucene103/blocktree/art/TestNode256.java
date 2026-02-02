@@ -16,9 +16,9 @@
  */
 package org.apache.lucene.codecs.lucene103.blocktree.art;
 
+import java.util.HashSet;
 import org.apache.lucene.tests.util.LuceneTestCase;
 import org.apache.lucene.util.BytesRef;
-import java.util.HashSet;
 
 public class TestNode256 extends LuceneTestCase {
   Node256 node = new Node256(0);

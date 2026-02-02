@@ -351,10 +351,8 @@ public abstract class Node {
       node = new Node16(prefixLength);
     } else if (nodeTypeOrdinal == NodeType.NODE48.ordinal()) {
       node = new Node48(prefixLength);
-    } else if (nodeTypeOrdinal == NodeType.NODE256.ordinal()) {
-      node = new Node256(prefixLength);
     } else {
-      throw new IOException("read error: bad nodeTypeOrdinal");
+      node = new Node256(prefixLength);
     }
 
     node.fp = fp;

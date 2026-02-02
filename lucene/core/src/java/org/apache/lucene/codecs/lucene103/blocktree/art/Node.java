@@ -57,7 +57,6 @@ public abstract class Node {
   public long outputFp = -1;
   public boolean hasTerms;
   long floorDataFp = -1;
-  int floorDataLen;
   int childrenDeltaFpBytes;
   long childrenDeltaFpStart;
 
@@ -268,6 +267,8 @@ public abstract class Node {
 
     index.writeByte((byte) header);
 
+    saveChildIndex(index);
+
     if (output != null) {
       long encodedFp = encodeFP(output);
       writeLongNBytes(encodedFp, encodedOutputFpBytes, index);
@@ -299,12 +300,8 @@ public abstract class Node {
     // We can use node's fp, childrenCount * childrenFpBytes to calculate floorData's fp.
     if (output != null && output.floorData() != null) {
       BytesRef floorData = output.floorData();
-      // We need floorData.length to calculate ChildIndex fp.
-      index.writeInt(floorData.length);
       index.writeBytes(floorData.bytes, floorData.offset, floorData.length);
     }
-
-    saveChildIndex(index);
   }
 
   /** Read node from data input. */
@@ -354,6 +351,8 @@ public abstract class Node {
     int header = access.readByte(fp + offset);
     offset += 1;
 
+    offset += node.readChildIndex(access, fp + offset);
+
     // Read children delta fp bytes and children delta fp start(for loading child).
     // If we want to calculate child's delta fp with childrenDeltaFpStart, childrenDeltaFpBytes.
     // children's pos must be saved
@@ -362,7 +361,6 @@ public abstract class Node {
     node.childrenDeltaFpStart = fp + offset;
     if ((header & NON_LEAF_NODE_HAS_OUTPUT) != 0) {
       int encodedOutputFpBytes = ((header >>> 4) & 0x07) + 1;
-      // TODO: impl readLongFromNBytes.
       long encodedOutputFp = access.readLong(fp + offset);
       offset += encodedOutputFpBytes;
       // Refresh childrenDeltaFpStart;
@@ -378,15 +376,10 @@ public abstract class Node {
 
       // Read floor.
       if ((encodedOutputFp & NON_LEAF_NODE_HAS_FLOOR) != 0) {
-        node.floorDataLen = access.readInt(fp + offset);
-        offset += 4;
         node.floorDataFp = fp + offset;
       }
-    } else {
-      // Skip children delta fp bytes.
-      offset += childrenCount * node.childrenDeltaFpBytes;
     }
-    node.readChildIndex(access, fp + offset + node.floorDataLen);
+
     return node;
   }
 
@@ -403,7 +396,7 @@ public abstract class Node {
   /** Write childIndex to output. */
   public abstract void readChildIndex(IndexInput dataInput) throws IOException;
 
-  public abstract void readChildIndex(RandomAccessInput access, long fp) throws IOException;
+  public abstract int readChildIndex(RandomAccessInput access, long fp) throws IOException;
 
   protected static int bytesRequiredVLong(long v) {
     return Long.BYTES - (Long.numberOfLeadingZeros(v | 1) >>> 3);

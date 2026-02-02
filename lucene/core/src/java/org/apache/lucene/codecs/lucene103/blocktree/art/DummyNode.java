@@ -72,7 +72,9 @@ public class DummyNode extends Node {
   public void readChildIndex(IndexInput dataInput) throws IOException {}
 
   @Override
-  public void readChildIndex(RandomAccessInput access, long fp) throws IOException {}
+  public int readChildIndex(RandomAccessInput access, long fp) throws IOException {
+    return 0;
+  }
 
   /** Insert the child node into this with the index byte. */
   @Override

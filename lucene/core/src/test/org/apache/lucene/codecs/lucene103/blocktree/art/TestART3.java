@@ -189,8 +189,8 @@ public class TestART3 extends LuceneTestCase {
       assertEquals(expected.fp(), node.outputFp);
       assertEquals(expected.hasTerms(), node.hasTerms);
 
-      if (node.floorDataLen > 0) {
-        byte[] floorData = new byte[node.floorDataLen];
+      if (expected.floorData() != null) {
+        byte[] floorData = new byte[expected.floorData().length];
         reader.access.readBytes(node.floorDataFp, floorData, 0, floorData.length);
         assertEquals(expected.floorData(), new BytesRef(floorData));
       }

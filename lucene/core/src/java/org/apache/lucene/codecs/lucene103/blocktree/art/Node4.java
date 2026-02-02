@@ -110,8 +110,9 @@ public class Node4 extends Node {
   }
 
   @Override
-  public void readChildIndex(RandomAccessInput access, long fp) throws IOException {
+  public int readChildIndex(RandomAccessInput access, long fp) throws IOException {
     childIndex = access.readInt(fp);
+    return 4;
   }
 
   @Override

@@ -268,6 +268,7 @@ public final class SegmentTermsEnum extends BaseTermsEnum {
   }
 
   private IOBooleanSupplier prepareSeekExact(BytesRef target, boolean prefetch) throws IOException {
+
     if (fr.size() > 0 && (target.compareTo(fr.getMin()) < 0 || target.compareTo(fr.getMax()) > 0)) {
       return null;
     }
@@ -324,7 +325,7 @@ public final class SegmentTermsEnum extends BaseTermsEnum {
                 nodeEnds[nodeIndex + 1],
                 target.bytes,
                 target.offset + nodeEnds[nodeIndex],
-                target.offset + nodeEnds[nodeIndex + 1]);
+                target.offset + Math.min(nodeEnds[nodeIndex + 1], target.length));
         // if (DEBUG) {
         //    System.out.println("    cycle targetUpto=" + targetUpto + " (vs limit=" + targetLimit
         // + ") cmp=" + cmp + " (targetLabel=" + (char) (target.bytes[target.offset + targetUpto]) +
@@ -634,7 +635,7 @@ public final class SegmentTermsEnum extends BaseTermsEnum {
                 nodeEnds[nodeIndex + 1],
                 target.bytes,
                 target.offset + nodeEnds[nodeIndex],
-                target.offset + nodeEnds[nodeIndex + 1]);
+                target.offset + Math.min(nodeEnds[nodeIndex + 1], target.length));
         //        cmp = (term.byteAt(targetUpto) & 0xFF) - (target.bytes[target.offset + targetUpto]
         // & 0xFF);
         // if (DEBUG) {

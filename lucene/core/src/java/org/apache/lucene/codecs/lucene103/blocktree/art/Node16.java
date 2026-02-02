@@ -157,9 +157,15 @@ public class Node16 extends Node {
   }
 
   @Override
-  public void readChildIndex(RandomAccessInput access, long fp) throws IOException {
+  public int readChildIndex(RandomAccessInput access, long fp) throws IOException {
+    int offset = 0;
     firstChildIndex = Long.reverseBytes(access.readLong(fp));
-    secondChildIndex = Long.reverseBytes(access.readLong(fp + 8));
+    offset += 8;
+    if (childrenCount > 8) {
+      secondChildIndex = Long.reverseBytes(access.readLong(fp + 8));
+      offset += 8;
+    }
+    return offset;
   }
 
   @Override

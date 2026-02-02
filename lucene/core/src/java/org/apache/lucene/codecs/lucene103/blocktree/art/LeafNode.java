@@ -92,8 +92,8 @@ public class LeafNode extends Node {
   }
 
   @Override
-  public void readChildIndex(RandomAccessInput access, long fp) throws IOException {
-    // empty
+  public int readChildIndex(RandomAccessInput access, long fp) throws IOException {
+    return 0;
   }
 
   @Override
@@ -132,7 +132,6 @@ public class LeafNode extends Node {
     index.writeByte(((byte) header));
     writeLongNBytes(output.fp(), outputFpBytes, index);
     if (output.floorData() != null) {
-      index.writeInt(output.floorData().length);
       index.writeBytes(
           output.floorData().bytes, output.floorData().offset, output.floorData().length);
     }
@@ -169,8 +168,6 @@ public class LeafNode extends Node {
     leafNode.hasTerms = (header & LEAF_NODE_HAS_TERMS) != 0;
     leafNode.outputFp = outputFP;
     if ((header & LEAF_NODE_HAS_FLOOR) != 0) {
-      leafNode.floorDataLen = access.readInt(fp + offset);
-      offset += 4;
       leafNode.floorDataFp = fp + offset;
     } else {
       leafNode.floorDataFp = NO_FLOOR_DATA;

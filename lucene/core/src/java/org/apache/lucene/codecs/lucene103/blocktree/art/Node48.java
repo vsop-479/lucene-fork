@@ -217,7 +217,7 @@ public class Node48 extends Node {
   }
 
   @Override
-  public void readChildIndex(RandomAccessInput access, long fp) throws IOException {
+  public int readChildIndex(RandomAccessInput access, long fp) throws IOException {
     final int mask = access.readInt(fp);
     int offset = 4;
     for (int i = 0; i < 32; i++) {
@@ -226,6 +226,7 @@ public class Node48 extends Node {
         offset += 8;
       }
     }
+    return offset;
   }
 
   @Override

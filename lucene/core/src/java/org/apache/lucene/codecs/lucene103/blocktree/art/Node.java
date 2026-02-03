@@ -157,11 +157,6 @@ public abstract class Node {
 
     saveChildIndex(index);
 
-    if (output != null) {
-      long encodedFp = encodeFP(output);
-      writeLongNBytes(encodedFp, encodedOutputFpBytes, index);
-    }
-
     // Write children's delta fps from first one.
     // For node48, we should write fps by iterate children[], because its getNextLargerPos
     // returns next byte,
@@ -184,11 +179,15 @@ public abstract class Node {
       }
     }
 
-    // write floor data
-    // We can use node's fp, childrenCount * childrenFpBytes to calculate floorData's fp.
-    if (output != null && output.floorData() != null) {
-      BytesRef floorData = output.floorData();
-      index.writeBytes(floorData.bytes, floorData.offset, floorData.length);
+    if (output != null) {
+      long encodedFp = encodeFP(output);
+      writeLongNBytes(encodedFp, encodedOutputFpBytes, index);
+      // write floor data
+      // We can use node's fp, childrenCount * childrenFpBytes to calculate floorData's fp.
+      if (output.floorData() != null) {
+        BytesRef floorData = output.floorData();
+        index.writeBytes(floorData.bytes, floorData.offset, floorData.length);
+      }
     }
   }
 
@@ -245,9 +244,7 @@ public abstract class Node {
     node.prefix = prefix;
     node.childrenCount = childrenCount;
 
-    //    // 3 bit encodedOutputFpBytes - 1, 1 bit has output, 3bit childrenFpBytes
-    //    int header = access.readByte(fp + offset);
-    //    offset += 1;
+    // 3 bit encodedOutputFpBytes - 1, 1 bit has output, 3bit childrenFpBytes
 
     offset += node.readChildIndex(access, fp + offset);
 
@@ -257,21 +254,20 @@ public abstract class Node {
     // without gap(node4, node16, node48), we should resolve gap issue for node256.
     node.childrenDeltaFpBytes = (header & 0x07) + 1;
     node.childrenDeltaFpStart = fp + offset;
+
+    // Skip children delta fp bytes.
+    offset += childrenCount * node.childrenDeltaFpBytes;
+
     if ((header & NON_LEAF_NODE_HAS_OUTPUT) != 0) {
       int encodedOutputFpBytes = ((header >>> 4) & 0x07) + 1;
       long encodedOutputFp = access.readLong(fp + offset);
       offset += encodedOutputFpBytes;
-      // Refresh childrenDeltaFpStart;
-      node.childrenDeltaFpStart = fp + offset;
       if (encodedOutputFpBytes < 8) {
         encodedOutputFp = encodedOutputFp & BYTES_MINUS_1_MASK[encodedOutputFpBytes - 1];
       }
 
       node.outputFp = encodedOutputFp >>> 2;
       node.hasTerms = (encodedOutputFp & NON_LEAF_NODE_HAS_TERMS) != 0;
-      // Skip children delta fp bytes even if no floor.
-      offset += childrenCount * node.childrenDeltaFpBytes;
-
       // Read floor.
       if ((encodedOutputFp & NON_LEAF_NODE_HAS_FLOOR) != 0) {
         node.floorDataFp = fp + offset;

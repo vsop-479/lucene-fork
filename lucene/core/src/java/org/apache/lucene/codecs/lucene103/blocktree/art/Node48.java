@@ -190,7 +190,7 @@ public class Node48 extends Node {
       // implement IndexOutput#setFilePointer,
       // And write back may harm performance. Maybe we can calculate mask in when inserting node.
       if (childIndex[i] != -1) {
-        dataOutput.writeLong(Long.reverseBytes(childIndex[i]));
+        dataOutput.writeLong(childIndex[i]);
       }
     }
   }
@@ -211,7 +211,7 @@ public class Node48 extends Node {
     final int mask = dataInput.readInt();
     for (int i = 0; i < 32; i++) {
       if (((mask >>> i) & 1) == 1) {
-        childIndex[i] = Long.reverseBytes(dataInput.readLong());
+        childIndex[i] = dataInput.readLong();
       }
     }
   }
@@ -222,7 +222,7 @@ public class Node48 extends Node {
     int offset = 4;
     for (int i = 0; i < 32; i++) {
       if (((mask >>> i) & 1) == 1) {
-        childIndex[i] = Long.reverseBytes(access.readLong(fp + offset));
+        childIndex[i] = access.readLong(fp + offset);
         offset += 8;
       }
     }

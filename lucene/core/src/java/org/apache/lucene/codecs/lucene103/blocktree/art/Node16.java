@@ -141,28 +141,27 @@ public class Node16 extends Node {
 
   @Override
   public void saveChildIndex(IndexOutput dataOutput) throws IOException {
-    // little endian
-    dataOutput.writeLong(Long.reverseBytes(firstChildIndex));
+    dataOutput.writeLong(firstChildIndex);
     if (childrenCount > 8) {
-      dataOutput.writeLong(Long.reverseBytes(secondChildIndex));
+      dataOutput.writeLong(secondChildIndex);
     }
   }
 
   @Override
   public void readChildIndex(IndexInput dataInput) throws IOException {
-    firstChildIndex = Long.reverseBytes(dataInput.readLong());
+    firstChildIndex = dataInput.readLong();
     if (childrenCount > 8) {
-      secondChildIndex = Long.reverseBytes(dataInput.readLong());
+      secondChildIndex = dataInput.readLong();
     }
   }
 
   @Override
   public int readChildIndex(RandomAccessInput access, long fp) throws IOException {
     int offset = 0;
-    firstChildIndex = Long.reverseBytes(access.readLong(fp));
+    firstChildIndex = access.readLong(fp);
     offset += 8;
     if (childrenCount > 8) {
-      secondChildIndex = Long.reverseBytes(access.readLong(fp + 8));
+      secondChildIndex = access.readLong(fp + 8);
       offset += 8;
     }
     return offset;

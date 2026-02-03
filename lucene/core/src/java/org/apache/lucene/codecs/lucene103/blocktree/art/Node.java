@@ -149,7 +149,7 @@ public abstract class Node {
 
     // Only save count, prefix for non-leaf node. Only save key for leaf node.
     // Children count.
-    index.writeShort(Short.reverseBytes(this.childrenCount));
+    index.writeShort(this.childrenCount);
     // Write prefix.
     // TODO: Impl write/read VInt like DataInput#readVInt.
     index.writeInt(this.prefixLength);
@@ -205,7 +205,7 @@ public abstract class Node {
     }
 
     // Children count.
-    short childrenCount = Short.reverseBytes(access.readShort(fp + offset));
+    short childrenCount = access.readShort(fp + offset);
     assert childrenCount > 0;
     offset += 2;
     // Prefix.

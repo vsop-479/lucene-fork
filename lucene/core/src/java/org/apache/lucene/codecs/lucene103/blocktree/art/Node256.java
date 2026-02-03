@@ -172,17 +172,16 @@ public class Node256 extends Node {
 
   @Override
   public void saveChildIndex(IndexOutput dataOutput) throws IOException {
-    // little endian
     for (long longV : bitmapMask) {
       // TODO: Skip -1 like node48.
-      dataOutput.writeLong(Long.reverseBytes(longV));
+      dataOutput.writeLong(longV);
     }
   }
 
   @Override
   public void readChildIndex(IndexInput dataInput) throws IOException {
     for (int i = 0; i < bitmapMask.length; i++) {
-      bitmapMask[i] = Long.reverseBytes(dataInput.readLong());
+      bitmapMask[i] = dataInput.readLong();
     }
   }
 
@@ -190,7 +189,7 @@ public class Node256 extends Node {
   public int readChildIndex(RandomAccessInput access, long fp) throws IOException {
     int offset = 0;
     for (int i = 0; i < bitmapMask.length; i++) {
-      bitmapMask[i] = Long.reverseBytes(access.readLong(fp + offset));
+      bitmapMask[i] = access.readLong(fp + offset);
       offset += 8;
     }
     return offset;

@@ -31,6 +31,8 @@ import org.apache.lucene.util.BytesRef;
 public abstract class Node {
   static final int LEAF_NODE_HAS_TERMS = 1 << 3;
   static final int LEAF_NODE_HAS_FLOOR = 1 << 4;
+  static final int LEAF_NODE = 1 << 7;
+  static final int LEAF_NODE_HAS_KEY = 1 << 6;
   static final int NON_LEAF_NODE_HAS_OUTPUT = 1 << 3;
   static final long NON_LEAF_NODE_HAS_TERMS = 1L << 1;
   static final long NON_LEAF_NODE_HAS_FLOOR = 1L << 0;
@@ -195,13 +197,10 @@ public abstract class Node {
   public static Node load(RandomAccessInput access, long fp) throws IOException {
     // Node type.
     int offset = 0;
-    //    int nodeTypeOrdinal = access.readByte(fp + offset);
-    //    assert nodeTypeOrdinal >= 0 && nodeTypeOrdinal <= 4
-    //        : "Wrong nodeTypeOrdinal: " + nodeTypeOrdinal;
 
     int header = access.readByte(fp + offset);
     offset += 1;
-    if (((header >>> 7) & 1) == 1) {
+    if ((header & LEAF_NODE) != 0) {
       return LeafNode.load(access, fp + offset, header);
     }
 
@@ -219,17 +218,7 @@ public abstract class Node {
       offset += prefixLength;
     }
 
-    // TODO: Change the constructor.
     Node node;
-    //    if (nodeTypeOrdinal == NodeType.NODE4.ordinal()) {
-    //      node = new Node4(prefixLength);
-    //    } else if (nodeTypeOrdinal == NodeType.NODE16.ordinal()) {
-    //      node = new Node16(prefixLength);
-    //    } else if (nodeTypeOrdinal == NodeType.NODE48.ordinal()) {
-    //      node = new Node48(prefixLength);
-    //    } else {
-    //      node = new Node256(prefixLength);
-    //    }
     if (childrenCount > 48) {
       node = new Node256(prefixLength);
     } else if (childrenCount > 16) {

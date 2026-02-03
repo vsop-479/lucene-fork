@@ -110,11 +110,14 @@ public class LeafNode extends Node {
   @Override
   public void saveNode(IndexOutput index) throws IOException {
     int outputFpBytes = bytesRequiredVLong(this.output.fp());
-    // highest 1 bit isLeaf(always 1), 1 bit has floor, 1 bit has term, 3 bits outputFpBytes.
+    // highest 1 bit isLeaf(always 1), 1 bit hash key, 1 bit has floor, 1 bit has term, 3 bits
+    // outputFpBytes.
+    // TODO: 1 bit has key.
     int header =
         (outputFpBytes - 1)
             | (output.hasTerms() ? LEAF_NODE_HAS_TERMS : 0)
             | (output.floorData() != null ? LEAF_NODE_HAS_FLOOR : 0)
+            | ((key != null && key.length > 0) ? LEAF_NODE_HAS_KEY : 0)
             | 1 << 7;
     index.writeByte(((byte) header));
     assert this.childrenCount == 0 : "leaf node should not have children";
@@ -123,8 +126,6 @@ public class LeafNode extends Node {
     if (key != null) {
       index.writeInt(key.length);
       index.writeBytes(key.bytes, key.offset, key.length);
-    } else {
-      index.writeInt(0);
     }
 
     writeLongNBytes(output.fp(), outputFpBytes, index);
@@ -142,13 +143,12 @@ public class LeafNode extends Node {
     // from fp: 1 byte nodeType, 4 byte keyLength, n bytes key, 1 byte header(1 bit has floor, 1 bit
     // has terms,
     // 3 bit outputFpBytes - 1), n bytes outputFp, n bytes floorData
-    // TODO: compress nodeType, header to 1 byte or keyLength.
-    //     We read node byte in Node.
     int offset = 0;
-    int keyLength = access.readInt(fp + offset);
-    offset += 4;
     BytesRef key = null;
-    if (keyLength > 0) {
+    if ((header & LEAF_NODE_HAS_KEY) != 0) {
+      int keyLength = access.readInt(fp + offset);
+      offset += 4;
+      assert keyLength > 0;
       byte[] keyBytes = new byte[keyLength];
       access.readBytes(fp + offset, keyBytes, 0, keyLength);
       offset += keyLength;

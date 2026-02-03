@@ -117,8 +117,6 @@ public class LeafNode extends Node {
             | (output.floorData() != null ? LEAF_NODE_HAS_FLOOR : 0)
             | 1 << 7;
     index.writeByte(((byte) header));
-    //    // Node type.
-    //    index.writeByte((byte) this.nodeType.ordinal());
     assert this.childrenCount == 0 : "leaf node should not have children";
     assert this.prefixLength == 0 : "leaf node should not have prefix";
     // write key.

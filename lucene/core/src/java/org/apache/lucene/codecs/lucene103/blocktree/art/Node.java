@@ -123,7 +123,6 @@ public abstract class Node {
   public void saveNode(IndexOutput index) throws IOException {
     // Get first child to calculate max delta fp between parent and children.
     // Children fps are in order, so the first child's fp is min, then delta is max.
-
     // For node48, its position is the child index byte, we use the first child in children.
     Node child;
     if (nodeType.equals(NodeType.NODE48)) {
@@ -146,8 +145,6 @@ public abstract class Node {
 
     index.writeByte((byte) header);
 
-    //    // Node type.
-    //    index.writeByte((byte) this.nodeType.ordinal());
     // Only save count, prefix for non-leaf node. Only save key for leaf node.
     // Children count.
     index.writeShort(Short.reverseBytes(this.childrenCount));

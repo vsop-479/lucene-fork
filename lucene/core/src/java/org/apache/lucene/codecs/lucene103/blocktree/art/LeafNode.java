@@ -109,8 +109,16 @@ public class LeafNode extends Node {
   /** Write leaf node to output. Save like trie. */
   @Override
   public void saveNode(IndexOutput index) throws IOException {
-    // Node type.
-    index.writeByte((byte) this.nodeType.ordinal());
+    int outputFpBytes = bytesRequiredVLong(this.output.fp());
+    // highest 1 bit isLeaf(always 1), 1 bit has floor, 1 bit has term, 3 bits outputFpBytes.
+    int header =
+        (outputFpBytes - 1)
+            | (output.hasTerms() ? LEAF_NODE_HAS_TERMS : 0)
+            | (output.floorData() != null ? LEAF_NODE_HAS_FLOOR : 0)
+            | 1 << 7;
+    index.writeByte(((byte) header));
+    //    // Node type.
+    //    index.writeByte((byte) this.nodeType.ordinal());
     assert this.childrenCount == 0 : "leaf node should not have children";
     assert this.prefixLength == 0 : "leaf node should not have prefix";
     // write key.
@@ -121,30 +129,24 @@ public class LeafNode extends Node {
       index.writeInt(0);
     }
 
+    writeLongNBytes(output.fp(), outputFpBytes, index);
+
     assert this.output != null : "leaf nodes should have output.";
     Output output = this.output;
-    int outputFpBytes = bytesRequiredVLong(this.output.fp());
-    // 3 bits outputFpBytes, 1 bit has term, 1 bit has floor.
-    int header =
-        (outputFpBytes - 1)
-            | (output.hasTerms() ? LEAF_NODE_HAS_TERMS : 0)
-            | (output.floorData() != null ? LEAF_NODE_HAS_FLOOR : 0);
-    index.writeByte(((byte) header));
-    writeLongNBytes(output.fp(), outputFpBytes, index);
     if (output.floorData() != null) {
       index.writeBytes(
           output.floorData().bytes, output.floorData().offset, output.floorData().length);
     }
   }
 
-  public static Node load(RandomAccessInput access, long fp) throws IOException {
+  public static Node load(RandomAccessInput access, long fp, int header) throws IOException {
     // TODO: Impl write/read VInt like DataInput#readVInt.
     // from fp: 1 byte nodeType, 4 byte keyLength, n bytes key, 1 byte header(1 bit has floor, 1 bit
     // has terms,
     // 3 bit outputFpBytes - 1), n bytes outputFp, n bytes floorData
     // TODO: compress nodeType, header to 1 byte or keyLength.
-    // We read node type in Node.
-    int offset = 1;
+    //     We read node byte in Node.
+    int offset = 0;
     int keyLength = access.readInt(fp + offset);
     offset += 4;
     BytesRef key = null;
@@ -155,8 +157,6 @@ public class LeafNode extends Node {
       key = new BytesRef(keyBytes);
     }
 
-    int header = access.readByte(fp + offset);
-    offset += 1;
     int outputFpBytes = (header & 0x07) + 1;
     // TODO: If EOF, we can readLongFromNBytes.
     long outputFP = access.readLong(fp + offset);

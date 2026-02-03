@@ -73,6 +73,7 @@ public class TestSegmentTermEnum extends LuceneTestCase {
       doc.add(newStringField("category", category, Field.Store.YES));
       writer.addDocument(doc);
     }
+    writer.forceMerge(1);
 
     IndexReader reader = DirectoryReader.open(writer);
     SegmentTermsEnum termsEnum =

@@ -119,23 +119,9 @@ public abstract class Node {
   /** Get the max child's position */
   public abstract int getMaxPos();
 
-  /**
-   * Write non leaf node to output. TODO: Move this to a non leaf node, or move leaf node into this.
-   */
+  /** Write non leaf node to output. */
   public void saveNode(IndexOutput index) throws IOException {
-    // Node type.
-    index.writeByte((byte) this.nodeType.ordinal());
-    // Only save count, prefix for non-leaf node. Only save key for leaf node.
-    // Children count.
-    index.writeShort(Short.reverseBytes(this.childrenCount));
-    // Write prefix.
-    // TODO: Impl write/read VInt like DataInput#readVInt.
-    index.writeInt(this.prefixLength);
-    if (prefixLength > 0) {
-      index.writeBytes(this.prefix, 0, this.prefixLength);
-    }
-
-    // Get first child to compute max delta fp between parent and children.
+    // Get first child to calculate max delta fp between parent and children.
     // Children fps are in order, so the first child's fp is min, then delta is max.
 
     // For node48, its position is the child index byte, we use the first child in children.
@@ -151,13 +137,26 @@ public abstract class Node {
 
     int childrenFpBytes = bytesRequiredVLong(maxChildDeltaFp);
     int encodedOutputFpBytes = output == null ? 1 : bytesRequiredVLong(output.fp() << 2);
-    // 3 bit encodedOutputFpBytes - 1, 1 bit has output, 3bit childrenFpBytes - 1
+    // highest 1 bit isLeaf(always 0), 3 bit encodedOutputFpBytes - 1, 1 bit has output, 3bit
+    // childrenFpBytes - 1
     int header =
         (childrenFpBytes - 1)
             | (output != null ? NON_LEAF_NODE_HAS_OUTPUT : 0)
             | ((encodedOutputFpBytes - 1) << 4);
 
     index.writeByte((byte) header);
+
+    //    // Node type.
+    //    index.writeByte((byte) this.nodeType.ordinal());
+    // Only save count, prefix for non-leaf node. Only save key for leaf node.
+    // Children count.
+    index.writeShort(Short.reverseBytes(this.childrenCount));
+    // Write prefix.
+    // TODO: Impl write/read VInt like DataInput#readVInt.
+    index.writeInt(this.prefixLength);
+    if (prefixLength > 0) {
+      index.writeBytes(this.prefix, 0, this.prefixLength);
+    }
 
     saveChildIndex(index);
 
@@ -200,15 +199,16 @@ public abstract class Node {
   public static Node load(RandomAccessInput access, long fp) throws IOException {
     // Node type.
     int offset = 0;
-    int nodeTypeOrdinal = access.readByte(fp + offset);
-    assert nodeTypeOrdinal >= 0 && nodeTypeOrdinal <= 4
-        : "Wrong nodeTypeOrdinal: " + nodeTypeOrdinal;
+    //    int nodeTypeOrdinal = access.readByte(fp + offset);
+    //    assert nodeTypeOrdinal >= 0 && nodeTypeOrdinal <= 4
+    //        : "Wrong nodeTypeOrdinal: " + nodeTypeOrdinal;
 
+    int header = access.readByte(fp + offset);
     offset += 1;
-    if (nodeTypeOrdinal == NodeType.LEAF_NODE.ordinal()) {
-      // TODO: adjust this call architecture.
-      return LeafNode.load(access, fp);
+    if (((header >>> 7) & 1) == 1) {
+      return LeafNode.load(access, fp + offset, header);
     }
+
     // Children count.
     short childrenCount = Short.reverseBytes(access.readShort(fp + offset));
     assert childrenCount > 0;
@@ -225,23 +225,32 @@ public abstract class Node {
 
     // TODO: Change the constructor.
     Node node;
-    if (nodeTypeOrdinal == NodeType.NODE4.ordinal()) {
-      node = new Node4(prefixLength);
-    } else if (nodeTypeOrdinal == NodeType.NODE16.ordinal()) {
-      node = new Node16(prefixLength);
-    } else if (nodeTypeOrdinal == NodeType.NODE48.ordinal()) {
-      node = new Node48(prefixLength);
-    } else {
+    //    if (nodeTypeOrdinal == NodeType.NODE4.ordinal()) {
+    //      node = new Node4(prefixLength);
+    //    } else if (nodeTypeOrdinal == NodeType.NODE16.ordinal()) {
+    //      node = new Node16(prefixLength);
+    //    } else if (nodeTypeOrdinal == NodeType.NODE48.ordinal()) {
+    //      node = new Node48(prefixLength);
+    //    } else {
+    //      node = new Node256(prefixLength);
+    //    }
+    if (childrenCount > 48) {
       node = new Node256(prefixLength);
+    } else if (childrenCount > 16) {
+      node = new Node48(prefixLength);
+    } else if (childrenCount > 4) {
+      node = new Node16(prefixLength);
+    } else {
+      node = new Node4(prefixLength);
     }
 
     node.fp = fp;
     node.prefix = prefix;
     node.childrenCount = childrenCount;
 
-    // 3 bit encodedOutputFpBytes - 1, 1 bit has output, 3bit childrenFpBytes
-    int header = access.readByte(fp + offset);
-    offset += 1;
+    //    // 3 bit encodedOutputFpBytes - 1, 1 bit has output, 3bit childrenFpBytes
+    //    int header = access.readByte(fp + offset);
+    //    offset += 1;
 
     offset += node.readChildIndex(access, fp + offset);
 

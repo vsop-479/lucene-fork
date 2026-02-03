@@ -110,9 +110,8 @@ public class LeafNode extends Node {
   @Override
   public void saveNode(IndexOutput index) throws IOException {
     int outputFpBytes = bytesRequiredVLong(this.output.fp());
-    // highest 1 bit isLeaf(always 1), 1 bit hash key, 1 bit has floor, 1 bit has term, 3 bits
+    // highest 1 bit isLeaf(always 1), 1 bit has key, 1 bit has floor, 1 bit has term, 3 bits
     // outputFpBytes.
-    // TODO: 1 bit has key.
     int header =
         (outputFpBytes - 1)
             | (output.hasTerms() ? LEAF_NODE_HAS_TERMS : 0)

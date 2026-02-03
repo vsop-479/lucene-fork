@@ -32,7 +32,7 @@ public abstract class Node {
   static final int LEAF_NODE_HAS_TERMS = 1 << 3;
   static final int LEAF_NODE_HAS_FLOOR = 1 << 4;
   static final int LEAF_NODE = 1 << 7;
-  static final int LEAF_NODE_HAS_KEY = 1 << 6;
+  static final int LEAF_NODE_HAS_KEY = 1 << 5;
   static final int NON_LEAF_NODE_HAS_OUTPUT = 1 << 3;
   static final long NON_LEAF_NODE_HAS_TERMS = 1L << 1;
   static final long NON_LEAF_NODE_HAS_FLOOR = 1L << 0;

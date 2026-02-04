@@ -183,6 +183,7 @@ public class Node48 extends Node {
 
   @Override
   public void saveChildIndex(IndexOutput dataOutput) throws IOException {
+    // TODO: It seems a regression after remove duplicate LE order.
     // TODO: Use mask can save store, but it is hard to say whether benefit to performance.
     dataOutput.writeInt(getMask());
     for (int i = 0; i < 32; i++) {

@@ -149,12 +149,15 @@ public abstract class Node {
 
     // Only save count, prefix for non-leaf node. Only save key for leaf node.
     // Children count.
-    index.writeShort(this.childrenCount);
+    // TODO: If we can save prefixLength in other byte, we can write childrenCount in one byte, for
+    // count > 127, write count - 256, and & 0xFF after reading it.
+    int prefixLengthBytes = prefixLength > 0 ? bytesRequiredVLong(prefixLength) : 0;
+    assert prefixLengthBytes <= 4 && prefixLengthBytes >= 0;
+    index.writeShort((short) ((childrenCount << 3) | prefixLengthBytes));
     // Write prefix.
-    // TODO: Impl write/read VInt like DataInput#readVInt.
-    index.writeInt(this.prefixLength);
     if (prefixLength > 0) {
-      index.writeBytes(this.prefix, 0, this.prefixLength);
+      writeLongNBytes(prefixLength, prefixLengthBytes, index);
+      index.writeBytes(prefix, 0, prefixLength);
     }
 
     saveChildIndex(index);
@@ -205,17 +208,30 @@ public abstract class Node {
     }
 
     // Children count.
-    short childrenCount = access.readShort(fp + offset);
-    assert childrenCount > 0;
+    short childrenCountAndPrefixLengthBytes = access.readShort(fp + offset);
     offset += 2;
-    // Prefix.
-    int prefixLength = access.readInt(fp + offset);
-    offset += 4;
+    short childrenCount = (short) (childrenCountAndPrefixLengthBytes >>> 3);
+    assert childrenCount > 0 && childrenCount <= 256;
+    // Number of prefixLengthBytes.
+    int prefixLengthBytes = childrenCountAndPrefixLengthBytes & 0x07;
+    assert prefixLengthBytes <= 4;
+
+    // Read prefix.
+    int prefixLength = 0;
     byte[] prefix = null;
-    if (prefixLength > 0) {
-      prefix = new byte[prefixLength];
-      access.readBytes(fp + offset, prefix, 0, prefixLength);
-      offset += prefixLength;
+    // Prefix.
+    if (prefixLengthBytes > 0) {
+      prefixLength = access.readInt(fp + offset);
+      offset += prefixLengthBytes;
+      if (prefixLengthBytes < 4) {
+        prefixLength = prefixLength & (int) BYTES_MINUS_1_MASK[prefixLengthBytes - 1];
+      }
+
+      if (prefixLength > 0) {
+        prefix = new byte[prefixLength];
+        access.readBytes(fp + offset, prefix, 0, prefixLength);
+        offset += prefixLength;
+      }
     }
 
     Node node;

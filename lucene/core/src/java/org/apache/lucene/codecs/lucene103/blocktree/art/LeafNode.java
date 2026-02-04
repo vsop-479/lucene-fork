@@ -155,7 +155,6 @@ public class LeafNode extends Node {
     }
 
     int outputFpBytes = (header & 0x07) + 1;
-    // TODO: If EOF, we can readLongFromNBytes.
     long outputFP = access.readLong(fp + offset);
     offset += outputFpBytes;
     if (outputFpBytes < 8) {

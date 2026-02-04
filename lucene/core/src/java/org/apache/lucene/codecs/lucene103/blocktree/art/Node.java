@@ -221,6 +221,7 @@ public abstract class Node {
     byte[] prefix = null;
     // Prefix.
     if (prefixLengthBytes > 0) {
+      // TODO: Read byte, short, int corresponding 1, 2, 3&4.
       prefixLength = access.readInt(fp + offset);
       offset += prefixLengthBytes;
       if (prefixLengthBytes < 4) {

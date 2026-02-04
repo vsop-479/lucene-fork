@@ -124,6 +124,8 @@ public class TestSegmentTermEnum extends LuceneTestCase {
       writer.addDocument(doc);
     }
 
+    writer.forceMerge(1);
+
     IndexReader reader = DirectoryReader.open(writer);
     SegmentTermsEnum termsEnum =
         (SegmentTermsEnum) (getOnlyLeafReader(reader).terms("category").iterator());

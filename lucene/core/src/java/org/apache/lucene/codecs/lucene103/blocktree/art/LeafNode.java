@@ -112,18 +112,31 @@ public class LeafNode extends Node {
     int outputFpBytes = bytesRequiredVLong(this.output.fp());
     // highest 1 bit isLeaf(always 1), 1 bit has key, 1 bit has floor, 1 bit has term, 3 bits
     // outputFpBytes.
+    int keyCode = 0;
+    if (key != null && key.length > 0) {
+      keyCode = bytesRequiredVLong(key.length);
+      assert keyCode >= 1 && keyCode <= 4;
+      if (keyCode == 4) {
+        keyCode = 3;
+      }
+    }
     int header =
         (outputFpBytes - 1)
             | (output.hasTerms() ? LEAF_NODE_HAS_TERMS : 0)
             | (output.floorData() != null ? LEAF_NODE_HAS_FLOOR : 0)
-            | ((key != null && key.length > 0) ? LEAF_NODE_HAS_KEY : 0)
+            | keyCode << 5
             | 1 << 7;
     index.writeByte(((byte) header));
     assert this.childrenCount == 0 : "leaf node should not have children";
     assert this.prefixLength == 0 : "leaf node should not have prefix";
     // write key.
     if (key != null) {
-      index.writeInt(key.length);
+      assert keyCode > 0;
+      switch (keyCode) {
+        case 1 -> index.writeByte((byte) key.length);
+        case 2 -> index.writeShort((short) key.length);
+        case 3 -> index.writeInt(key.length);
+      }
       index.writeBytes(key.bytes, key.offset, key.length);
     }
 
@@ -140,9 +153,23 @@ public class LeafNode extends Node {
   public static Node load(RandomAccessInput access, long fp, int header) throws IOException {
     int offset = 0;
     BytesRef key = null;
-    if ((header & LEAF_NODE_HAS_KEY) != 0) {
-      int keyLength = access.readInt(fp + offset);
-      offset += 4;
+    int keyCode = (header >>> 5) & 3;
+    if (keyCode > 0) {
+      int keyLength = 0;
+      switch (keyCode) {
+        case 1 -> {
+          keyLength = access.readByte(fp + offset) & (int) BYTES_MINUS_1_MASK[0];
+          offset += 1;
+        }
+        case 2 -> {
+          keyLength = access.readShort(fp + offset) & (int) BYTES_MINUS_1_MASK[1];
+          offset += 2;
+        }
+        case 3 -> {
+          keyLength = access.readInt(fp + offset);
+          offset += 4;
+        }
+      }
       assert keyLength > 0;
       byte[] keyBytes = new byte[keyLength];
       access.readBytes(fp + offset, keyBytes, 0, keyLength);

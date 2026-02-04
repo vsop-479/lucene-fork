@@ -138,10 +138,6 @@ public class LeafNode extends Node {
   }
 
   public static Node load(RandomAccessInput access, long fp, int header) throws IOException {
-    // TODO: Impl write/read VInt like DataInput#readVInt.
-    // from fp: 1 byte nodeType, 4 byte keyLength, n bytes key, 1 byte header(1 bit has floor, 1 bit
-    // has terms,
-    // 3 bit outputFpBytes - 1), n bytes outputFp, n bytes floorData
     int offset = 0;
     BytesRef key = null;
     if ((header & LEAF_NODE_HAS_KEY) != 0) {

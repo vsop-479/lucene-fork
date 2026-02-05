@@ -110,29 +110,29 @@ public class LeafNode extends Node {
   @Override
   public void saveNode(IndexOutput index) throws IOException {
     int outputFpBytes = bytesRequiredVLong(this.output.fp());
-    // highest 1 bit isLeaf(always 1), 1 bit has key, 1 bit has floor, 1 bit has term, 3 bits
+    // highest 1 bit isLeaf(always 1), 2 bit keyLengthCode, 1 bit has floor, 1 bit has term, 3 bits
     // outputFpBytes.
-    int keyCode = 0;
+    int keyLengthCode = 0;
     if (key != null && key.length > 0) {
-      keyCode = bytesRequiredVLong(key.length);
-      assert keyCode >= 1 && keyCode <= 4;
-      if (keyCode == 4) {
-        keyCode = 3;
+      keyLengthCode = bytesRequiredVLong(key.length);
+      assert keyLengthCode >= 1 && keyLengthCode <= 4;
+      if (keyLengthCode == 4) {
+        keyLengthCode = 3;
       }
     }
     int header =
         (outputFpBytes - 1)
             | (output.hasTerms() ? LEAF_NODE_HAS_TERMS : 0)
             | (output.floorData() != null ? LEAF_NODE_HAS_FLOOR : 0)
-            | keyCode << 5
+            | keyLengthCode << 5
             | 1 << 7;
     index.writeByte(((byte) header));
     assert this.childrenCount == 0 : "leaf node should not have children";
     assert this.prefixLength == 0 : "leaf node should not have prefix";
     // write key.
     if (key != null) {
-      assert keyCode > 0;
-      switch (keyCode) {
+      assert keyLengthCode > 0;
+      switch (keyLengthCode) {
         case 1 -> index.writeByte((byte) key.length);
         case 2 -> index.writeShort((short) key.length);
         case 3 -> index.writeInt(key.length);

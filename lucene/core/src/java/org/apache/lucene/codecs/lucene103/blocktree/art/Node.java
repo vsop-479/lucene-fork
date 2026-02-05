@@ -231,12 +231,10 @@ public abstract class Node {
         case 4 -> prefixLength = access.readInt(fp + offset);
       }
       offset += prefixLengthBytes;
-
-      if (prefixLength > 0) {
-        prefix = new byte[prefixLength];
-        access.readBytes(fp + offset, prefix, 0, prefixLength);
-        offset += prefixLength;
-      }
+      assert prefixLength > 0;
+      prefix = new byte[prefixLength];
+      access.readBytes(fp + offset, prefix, 0, prefixLength);
+      offset += prefixLength;
     }
 
     Node node;

@@ -28,6 +28,8 @@ public class Node48 extends Node {
   // the actual byte value of childIndex content won't be beyond 48
   long[] childIndex = new long[32];
   Node[] children = new Node[48];
+  static final int INDEX_SHIFT = 3; // 2^3 == BYTES_PER_LONG
+  static final int POS_MASK = 0x7; // the mask to access the pos in the long for the byte
   static final byte EMPTY_VALUE = -1;
   static final long INIT_LONG_VALUE = -1L;
 
@@ -83,8 +85,8 @@ public class Node48 extends Node {
       pos = -1;
     }
     pos++;
-    int i = pos >>> 3;
-    int offset = pos & (8 - 1);
+    int i = pos >>> INDEX_SHIFT;
+    int offset = pos & POS_MASK;
     for (; i < 32; i++) {
       long longv = childIndex[i];
       if (offset == 0) {
@@ -141,8 +143,8 @@ public class Node48 extends Node {
       assert this.children[pos] == null;
       this.children[pos] = child;
       int unsignedByte = Byte.toUnsignedInt(indexByte);
-      int longPosition = unsignedByte >>> 3;
-      int bytePosition = unsignedByte & (8 - 1);
+      int longPosition = unsignedByte >>> INDEX_SHIFT;
+      int bytePosition = unsignedByte & POS_MASK;
       long original = this.childIndex[longPosition];
       byte[] bytes = LongUtils.toBDBytes(original);
       bytes[bytePosition] = (byte) pos;
@@ -165,16 +167,16 @@ public class Node48 extends Node {
   }
 
   private static byte childrenIdx(int pos, long[] childIndex) {
-    int longPos = pos >>> 3;
-    int bytePos = pos & (8 - 1);
+    int longPos = pos >>> INDEX_SHIFT;
+    int bytePos = pos & POS_MASK;
     long longv = childIndex[longPos];
     byte idx = (byte) ((longv) >>> (7 - bytePos) * 8);
     return idx;
   }
 
   static void setOneByte(int pos, byte v, long[] childIndex) {
-    int longPos = pos >>> 3;
-    int bytePos = pos & (8 - 1);
+    int longPos = pos >>> INDEX_SHIFT;
+    int bytePos = pos & POS_MASK;
     long preVal = childIndex[longPos];
     byte[] bytes = LongUtils.toBDBytes(preVal);
     bytes[bytePos] = v;

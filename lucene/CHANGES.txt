@@ -73,6 +73,8 @@ New Features
 Improvements
 ---------------------
 
+* GITHUB#15682: Use ArrayDeque instead of LinkedList in CompoundWordTokenFilterBase.java. (Renato Haeberli)
+
 * GITHUB#15568: Add markdown support for javadocs and modernize highlighting a bit. (Dawid Weiss)
 
 * GITHUB#14972: Require named thread factory in ThreadPoolExecutor constructors. (Dawid Weiss)
@@ -91,6 +93,8 @@ Improvements
 
 Optimizations
 ---------------------
+* GITHUB#15681: Replace pre-sized array or empty array with lambda expression to call Collection#toArray. (Zhou Hui)
+
 * GITHUB#13782: Replace handwritten loops compare with Arrays.compareUnsigned in TermsEnum and TermsEnumFrame classes. (Zhou Hui)
 
 * GITHUB#14011: Reduce allocation rate in HNSW concurrent merge. (Viliam Durina)
@@ -101,6 +105,8 @@ Optimizations
 * GITHUB#15043: Vectorize L2 normalize function. (Ramakrishna Chilaka)
 
 * GITHUB#15085, GITHUB#15092: Hunspell suggestions: Ensure candidate roots are not worse before updating. (Ilia Permiashkin)
+
+* GITHUB#15597: Reduce memory usage of NeighborArray (Viliam Durina)
 
 Bug Fixes
 ---------------------
@@ -191,7 +197,9 @@ Optimizations
 
 Bug Fixes
 ---------------------
-(No changes)
+* GITHUB#15668: Fix UnsupportedOperationException in WeightedSpanTermExtractor by
+  implementing getFieldInfos in DelegatingLeafReader. (Simranjeet Singh)
+
 
 Other
 ---------------------
@@ -356,8 +364,6 @@ Optimizations
 * GITHUB#15560: Avoid unnecessary getGraph() call. (Shubham Chaudhary)
 
 * GITHUB#15582: Avoid copying bitset that's subsequently cleared (Viliam Durina)
-
-* GITHUB#15592: Optimize DocIdSetIteratorAcceptDocs#cost. (Shubham Chaudhary)
 
 * GITHUB#15618: SegmentTermsEnumFrame: avoid unnecessary array allocations that waste memory (Misha Dmitriev)
 

@@ -63,9 +63,9 @@ import org.apache.lucene.document.SortedSetDocValuesField;
 import org.apache.lucene.document.StoredField;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
-import org.apache.lucene.search.CollectionStatistics;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.FieldDoc;
+import org.apache.lucene.search.FieldStatistics;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
@@ -2296,7 +2296,7 @@ public class TestIndexSorting extends LuceneTestCase {
 
     @Override
     public SimScorer scorer(
-        float boost, CollectionStatistics collectionStats, TermStatistics... termStats) {
+        float boost, FieldStatistics collectionStats, TermStatistics... termStats) {
       return in.scorer(boost, collectionStats, termStats);
     }
   }

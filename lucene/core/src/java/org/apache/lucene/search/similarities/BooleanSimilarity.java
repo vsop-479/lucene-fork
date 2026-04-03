@@ -16,8 +16,8 @@
  */
 package org.apache.lucene.search.similarities;
 
-import org.apache.lucene.search.CollectionStatistics;
 import org.apache.lucene.search.Explanation;
+import org.apache.lucene.search.FieldStatistics;
 import org.apache.lucene.search.TermStatistics;
 
 /**
@@ -35,7 +35,7 @@ public class BooleanSimilarity extends Similarity {
 
   @Override
   public SimScorer scorer(
-      float boost, CollectionStatistics collectionStats, TermStatistics... termStats) {
+      float boost, FieldStatistics collectionStats, TermStatistics... termStats) {
     return new BooleanWeight(boost);
   }
 

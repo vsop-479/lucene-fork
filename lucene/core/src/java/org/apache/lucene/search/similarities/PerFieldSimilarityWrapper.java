@@ -17,7 +17,7 @@
 package org.apache.lucene.search.similarities;
 
 import org.apache.lucene.index.FieldInvertState;
-import org.apache.lucene.search.CollectionStatistics;
+import org.apache.lucene.search.FieldStatistics;
 import org.apache.lucene.search.TermStatistics;
 
 /**
@@ -40,7 +40,7 @@ public abstract class PerFieldSimilarityWrapper extends Similarity {
 
   @Override
   public final SimScorer scorer(
-      float boost, CollectionStatistics collectionStats, TermStatistics... termStats) {
+      float boost, FieldStatistics collectionStats, TermStatistics... termStats) {
     return get(collectionStats.field()).scorer(boost, collectionStats, termStats);
   }
 

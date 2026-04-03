@@ -189,7 +189,7 @@ final class JustCompileSearch {
 
     @Override
     public SimScorer scorer(
-        float boost, CollectionStatistics collectionStats, TermStatistics... termStats) {
+        float boost, FieldStatistics collectionStats, TermStatistics... termStats) {
       throw new UnsupportedOperationException(UNSUPPORTED_MSG);
     }
 

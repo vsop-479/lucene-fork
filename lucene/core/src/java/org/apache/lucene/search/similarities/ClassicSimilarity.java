@@ -16,8 +16,8 @@
  */
 package org.apache.lucene.search.similarities;
 
-import org.apache.lucene.search.CollectionStatistics;
 import org.apache.lucene.search.Explanation;
+import org.apache.lucene.search.FieldStatistics;
 import org.apache.lucene.search.TermStatistics;
 
 /**
@@ -53,7 +53,7 @@ public class ClassicSimilarity extends TFIDFSimilarity {
   }
 
   @Override
-  public Explanation idfExplain(CollectionStatistics collectionStats, TermStatistics termStats) {
+  public Explanation idfExplain(FieldStatistics collectionStats, TermStatistics termStats) {
     final long df = termStats.docFreq();
     final long docCount = collectionStats.docCount();
     final float idf = idf(df, docCount);

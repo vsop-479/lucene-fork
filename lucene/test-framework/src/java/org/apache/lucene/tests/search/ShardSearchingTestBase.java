@@ -29,7 +29,7 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermStates;
-import org.apache.lucene.search.CollectionStatistics;
+import org.apache.lucene.search.FieldStatistics;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.QueryVisitor;
@@ -125,7 +125,7 @@ public abstract class ShardSearchingTestBase extends LuceneTestCase {
     // Broadcast new collection stats for this node to all
     // other nodes:
     for (String field : fieldsToShare) {
-      final CollectionStatistics stats = newSearcher.collectionStatistics(field);
+      final FieldStatistics stats = newSearcher.collectionStatistics(field);
       if (stats != null) {
         for (NodeState node : nodes) {
           // Don't put my own collection stats into the cache;
@@ -204,7 +204,7 @@ public abstract class ShardSearchingTestBase extends LuceneTestCase {
     // local cache...?  And still LRU otherwise (for the
     // still-live searchers).
 
-    private final Map<FieldAndShardVersion, CollectionStatistics> collectionStatsCache =
+    private final Map<FieldAndShardVersion, FieldStatistics> collectionStatsCache =
         new ConcurrentHashMap<>();
     private final Map<TermAndShardVersion, TermStatistics> termStatsCache =
         new ConcurrentHashMap<>();
@@ -294,7 +294,7 @@ public abstract class ShardSearchingTestBase extends LuceneTestCase {
       }
 
       @Override
-      public CollectionStatistics collectionStatistics(String field) throws IOException {
+      public FieldStatistics collectionStatistics(String field) throws IOException {
         // TODO: we could compute this on init and cache,
         // since we are re-inited whenever any nodes have a
         // new reader
@@ -306,7 +306,7 @@ public abstract class ShardSearchingTestBase extends LuceneTestCase {
         for (int nodeID = 0; nodeID < nodeVersions.length; nodeID++) {
           final FieldAndShardVersion key =
               new FieldAndShardVersion(nodeID, nodeVersions[nodeID], field);
-          final CollectionStatistics nodeStats;
+          final FieldStatistics nodeStats;
           if (nodeID == myNodeID) {
             nodeStats = super.collectionStatistics(field);
           } else {
@@ -332,7 +332,7 @@ public abstract class ShardSearchingTestBase extends LuceneTestCase {
         if (maxDoc == 0) {
           return null; // field not found across any node whatsoever
         } else {
-          return new CollectionStatistics(field, maxDoc, docCount, sumTotalTermFreq, sumDocFreq);
+          return new FieldStatistics(field, maxDoc, docCount, sumTotalTermFreq, sumDocFreq);
         }
       }
 

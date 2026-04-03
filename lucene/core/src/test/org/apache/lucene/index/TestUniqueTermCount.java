@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.search.CollectionStatistics;
+import org.apache.lucene.search.FieldStatistics;
 import org.apache.lucene.search.TermStatistics;
 import org.apache.lucene.search.similarities.Similarity;
 import org.apache.lucene.store.Directory;
@@ -101,7 +101,7 @@ public class TestUniqueTermCount extends LuceneTestCase {
 
     @Override
     public SimScorer scorer(
-        float boost, CollectionStatistics collectionStats, TermStatistics... termStats) {
+        float boost, FieldStatistics collectionStats, TermStatistics... termStats) {
       throw new UnsupportedOperationException();
     }
   }

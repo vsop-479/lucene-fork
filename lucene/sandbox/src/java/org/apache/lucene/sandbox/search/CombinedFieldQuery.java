@@ -38,11 +38,11 @@ import org.apache.lucene.index.TermStates;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.CollectionStatistics;
 import org.apache.lucene.search.DisiWrapper;
 import org.apache.lucene.search.DisjunctionDISIApproximation;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.Explanation;
+import org.apache.lucene.search.FieldStatistics;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Matches;
 import org.apache.lucene.search.Query;
@@ -321,7 +321,7 @@ public final class CombinedFieldQuery extends Query implements Accountable {
         }
       }
       if (docFreq > 0) {
-        CollectionStatistics pseudoCollectionStats = mergeCollectionStatistics(searcher);
+        FieldStatistics pseudoCollectionStats = mergeCollectionStatistics(searcher);
         TermStatistics pseudoTermStatistics =
             new TermStatistics(new BytesRef("pseudo_term"), docFreq, Math.max(1, totalTermFreq));
         this.simWeight =
@@ -331,14 +331,13 @@ public final class CombinedFieldQuery extends Query implements Accountable {
       }
     }
 
-    private CollectionStatistics mergeCollectionStatistics(IndexSearcher searcher)
-        throws IOException {
+    private FieldStatistics mergeCollectionStatistics(IndexSearcher searcher) throws IOException {
       long maxDoc = 0;
       long docCount = 0;
       long sumTotalTermFreq = 0;
       long sumDocFreq = 0;
       for (FieldAndWeight fieldWeight : fieldAndWeights.values()) {
-        CollectionStatistics collectionStats = searcher.collectionStatistics(fieldWeight.field);
+        FieldStatistics collectionStats = searcher.collectionStatistics(fieldWeight.field);
         if (collectionStats != null) {
           maxDoc = Math.max(collectionStats.maxDoc(), maxDoc);
           docCount = Math.max(collectionStats.docCount(), docCount);
@@ -347,8 +346,7 @@ public final class CombinedFieldQuery extends Query implements Accountable {
         }
       }
 
-      return new CollectionStatistics(
-          "pseudo_field", maxDoc, docCount, sumTotalTermFreq, sumDocFreq);
+      return new FieldStatistics("pseudo_field", maxDoc, docCount, sumTotalTermFreq, sumDocFreq);
     }
 
     @Override

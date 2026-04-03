@@ -481,7 +481,7 @@ public class TestCombinedFieldQuery extends LuceneTestCase {
 
     @Override
     public SimScorer scorer(
-        float boost, CollectionStatistics collectionStats, TermStatistics... termStats) {
+        float boost, FieldStatistics collectionStats, TermStatistics... termStats) {
       return new BM25Similarity().scorer(boost, collectionStats, termStats);
     }
   }
@@ -533,8 +533,8 @@ public class TestCombinedFieldQuery extends LuceneTestCase {
     IndexSearcher searcher =
         new IndexSearcher(reader) {
           @Override
-          public CollectionStatistics collectionStatistics(String field) throws IOException {
-            CollectionStatistics shardStatistics = super.collectionStatistics(field);
+          public FieldStatistics collectionStatistics(String field) throws IOException {
+            FieldStatistics shardStatistics = super.collectionStatistics(field);
             int extraSumTotalTermFreq;
             if (field.equals("a")) {
               extraSumTotalTermFreq = extraSumTotalTermFreqA;
@@ -545,7 +545,7 @@ public class TestCombinedFieldQuery extends LuceneTestCase {
             } else {
               throw new AssertionError("should never be called");
             }
-            return new CollectionStatistics(
+            return new FieldStatistics(
                 field,
                 shardStatistics.maxDoc() + extraMaxDoc,
                 shardStatistics.docCount() + extraDocCount,

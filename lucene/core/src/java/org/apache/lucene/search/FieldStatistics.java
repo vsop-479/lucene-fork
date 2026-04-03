@@ -19,7 +19,7 @@ package org.apache.lucene.search;
 import java.util.Objects;
 
 /**
- * Contains statistics for a collection (field).
+ * Contains statistics for a field.
  *
  * <p>This class holds statistics across all documents for scoring purposes:
  *
@@ -66,10 +66,10 @@ import java.util.Objects;
  *     exceeds {@link #sumTotalTermFreq()}. @see Terms#getSumDocFreq()
  * @lucene.experimental
  */
-public record CollectionStatistics(
+public record FieldStatistics(
     String field, long maxDoc, long docCount, long sumTotalTermFreq, long sumDocFreq) {
   /**
-   * Creates statistics instance for a collection (field).
+   * Creates statistics instance for a field.
    *
    * @throws IllegalArgumentException if {@code maxDoc} is negative or zero.
    * @throws IllegalArgumentException if {@code docCount} is negative or zero.
@@ -77,7 +77,7 @@ public record CollectionStatistics(
    * @throws IllegalArgumentException if {@code sumDocFreq} is less than {@code docCount}.
    * @throws IllegalArgumentException if {@code sumTotalTermFreq} is less than {@code sumDocFreq}.
    */
-  public CollectionStatistics {
+  public FieldStatistics {
     Objects.requireNonNull(field);
     if (maxDoc <= 0) {
       throw new IllegalArgumentException("maxDoc must be positive, maxDoc: " + maxDoc);

@@ -74,8 +74,8 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.index.VectorSimilarityFunction;
-import org.apache.lucene.search.CollectionStatistics;
 import org.apache.lucene.search.DocIdSetIterator;
+import org.apache.lucene.search.FieldStatistics;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.KnnByteVectorQuery;
 import org.apache.lucene.search.KnnFloatVectorQuery;
@@ -218,7 +218,7 @@ public class TestMemoryIndex extends LuceneTestCase {
 
           @Override
           public SimScorer scorer(
-              float boost, CollectionStatistics collectionStats, TermStatistics... termStats) {
+              float boost, FieldStatistics collectionStats, TermStatistics... termStats) {
             throw new UnsupportedOperationException();
           }
         });

@@ -26,8 +26,8 @@ import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.index.PostingsEnum;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermStates;
-import org.apache.lucene.search.CollectionStatistics;
 import org.apache.lucene.search.Explanation;
+import org.apache.lucene.search.FieldStatistics;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Matches;
 import org.apache.lucene.search.MatchesIterator;
@@ -111,7 +111,7 @@ public abstract class SpanWeight extends Weight {
             searcher.termStatistics(entry.getKey(), ts.docFreq(), ts.totalTermFreq());
       }
     }
-    CollectionStatistics collectionStats = searcher.collectionStatistics(query.getField());
+    FieldStatistics collectionStats = searcher.collectionStatistics(query.getField());
     if (termUpTo > 0) {
       return similarity.scorer(
           boost, collectionStats, ArrayUtil.copyOfSubArray(termStats, 0, termUpTo));

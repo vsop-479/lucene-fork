@@ -18,8 +18,8 @@ package org.apache.lucene.search.similarities;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.lucene.search.CollectionStatistics;
 import org.apache.lucene.search.Explanation;
+import org.apache.lucene.search.FieldStatistics;
 import org.apache.lucene.search.TermStatistics;
 import org.apache.lucene.util.SmallFloat;
 
@@ -53,7 +53,7 @@ public abstract class SimilarityBase extends Similarity {
 
   @Override
   public final SimScorer scorer(
-      float boost, CollectionStatistics collectionStats, TermStatistics... termStats) {
+      float boost, FieldStatistics collectionStats, TermStatistics... termStats) {
     SimScorer[] weights = new SimScorer[termStats.length];
     for (int i = 0; i < termStats.length; i++) {
       BasicStats stats = newStats(collectionStats.field(), boost);
@@ -77,7 +77,7 @@ public abstract class SimilarityBase extends Similarity {
    * this method to fill additional stats.
    */
   protected void fillBasicStats(
-      BasicStats stats, CollectionStatistics collectionStats, TermStatistics termStats) {
+      BasicStats stats, FieldStatistics collectionStats, TermStatistics termStats) {
     // TODO: validate this for real, somewhere else
     assert termStats.totalTermFreq() <= collectionStats.sumTotalTermFreq();
     assert termStats.docFreq() <= collectionStats.sumDocFreq();

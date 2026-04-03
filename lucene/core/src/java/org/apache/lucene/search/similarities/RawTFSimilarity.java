@@ -16,7 +16,7 @@
  */
 package org.apache.lucene.search.similarities;
 
-import org.apache.lucene.search.CollectionStatistics;
+import org.apache.lucene.search.FieldStatistics;
 import org.apache.lucene.search.TermStatistics;
 
 /** Similarity that returns the raw TF as score. */
@@ -34,7 +34,7 @@ public class RawTFSimilarity extends Similarity {
 
   @Override
   public SimScorer scorer(
-      float boost, CollectionStatistics collectionStats, TermStatistics... termStats) {
+      float boost, FieldStatistics collectionStats, TermStatistics... termStats) {
     return new SimScorer() {
       @Override
       public float score(float freq, long norm) {

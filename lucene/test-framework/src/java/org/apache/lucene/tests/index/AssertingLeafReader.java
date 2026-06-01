@@ -600,6 +600,17 @@ public class AssertingLeafReader extends FilterLeafReader {
     }
 
     @Override
+    public int docIDRunEnd() throws IOException {
+      assertThread("Docs enums", creationThread);
+      assert state != DocsEnumState.START : "intoBitSet() called before nextDoc()/advance()";
+      int startDocID = in.docID();
+      int endDocID = in.docIDRunEnd();
+      assert in.docID() == startDocID : "iterator changed docID while running docIDRunEnd()";
+      assert endDocID > startDocID;
+      return endDocID;
+    }
+
+    @Override
     public void nextPostings(int upTo, DocAndFloatFeatureBuffer buffer) throws IOException {
       assert state != DocsEnumState.START : "nextPostings() called before nextDoc()/advance()";
       in.nextPostings(upTo, buffer);
@@ -1403,6 +1414,12 @@ public class AssertingLeafReader extends FilterLeafReader {
         assert minDocID <= in.minDocID(level - 1);
       }
       return minDocID;
+    }
+
+    @Override
+    public int maxValueCount() {
+      assertThread("Doc values skipper", creationThread);
+      return in.maxValueCount();
     }
 
     @Override

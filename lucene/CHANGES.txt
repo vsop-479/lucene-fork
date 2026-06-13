@@ -303,9 +303,11 @@ API Changes
 * GITHUB#16062: Add FlatFieldVectorsWriter.asKnnVectorValues to return directly a KnnVectorValues "view" over
   vectors to be written. (Lorenzo Dematte)
 
-* GITHUB#16101 Add DictionaryColumn for SORTED / SORTED_SET docvalues using experimental column api (Tim Brooks)
+* GITHUB#16101: Add DictionaryColumn for SORTED / SORTED_SET docvalues using experimental column api (Tim Brooks)
 
 * GITHUB#16104: Add public constructors and a public getSearchStrategy() to FloatVectorSimilarityQuery, ByteVectorSimilarityQuery and VectorSimilarityCollector that accept a KnnSearchStrategy. (Sasilekha R)
+
+* GITHUB#16227: Add dense indexing path for BinaryColumn while using experimental column api (Tim Brooks)
 
 New Features
 ---------------------
@@ -387,6 +389,8 @@ Improvements
 * GITHUB#16088: SearchGroup#merge now returns an empty collection instead of null when topGroups is empty. (Luca Cavanna)
 
 * GITHUB#16144: Clarify LeafCollector batch collection scoring contract. (Costin Leau)
+
+* GITHUB#16229: BooleanWeight.explain prints failing optional clauses when query fails due to insufficient SHOULD matches. (Jakub Slowinski)
 
 Optimizations
 ---------------------
